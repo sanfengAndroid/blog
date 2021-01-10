@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Hello World</title>
+    <url>/2021/01/10/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook</title>
+    <url>/2021/01/10/Android-%E5%8A%A8%E6%80%81%E4%BF%AE%E6%94%B9Linker%E5%AE%9E%E7%8E%B0LD-PRELOAD%E5%85%A8%E5%B1%80%E5%BA%93PLT-Hook/</url>
+    <content><![CDATA[<h1 id="修改Android-Linker加载Hook模块分析"><a href="#修改Android-Linker加载Hook模块分析" class="headerlink" title="修改Android Linker加载Hook模块分析"></a>修改Android Linker加载Hook模块分析</h1><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们知道linux系统中存在 <code>LD_PRELOAD</code> 环境变量更改库的链接顺序，而Android使用linux是内核也包含 <code>LD_PRELOAD</code>环境变量，具体使用路径在<a href="https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linker_main.cpp;l=350"><code>linker_main</code></a>中(本文分析源码如未特别提及则都基于最新主分支)。在执行<code>linker</code>初始化时访问了该环境变量，后续优先加载将其作为全局库从而影响之后该进程加载的所有库的符号链接，因此后续我们将围绕该环境变量展开</p>
+<h2 id="1-如何设置LD-PRELOAD环境变量"><a href="#1-如何设置LD-PRELOAD环境变量" class="headerlink" title="1.如何设置LD_PRELOAD环境变量"></a>1.如何设置<code>LD_PRELOAD</code>环境变量</h2>]]></content>
+      <categories>
+        <category>Android源码</category>
+        <category>Android Hook</category>
+        <category>Android Hook</category>
+      </categories>
+      <tags>
+        <tag>Android源码</tag>
+        <tag>Android Hook</tag>
+        <tag>PLT Hook</tag>
+      </tags>
+  </entry>
+</search>
