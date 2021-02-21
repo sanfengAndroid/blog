@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"github.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":true,"nav":{"gitalk":{"order":-2}},"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="FakeXposed一个通用多功能的 Xposed 隐藏器，采用 Native 与 Java 结合来做到双向屏蔽检测，提供高度自由化为每个应用配置不同属性。它不仅仅局限于屏蔽 Xposed 检测，还提供更多更加高级的功能，如 maps 文件自定义屏蔽各种检测、完整的文件重定向功能、访问权限控制、JNI 方法监控、动态符号查找屏蔽 dlsym 等等，还可以提供给其它模块在进程内动态添加或修改配置。开">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FakeXposed原理分析">
+<meta property="og:url" content="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/">
+<meta property="og:site_name" content="sanfengAndroid逆向安全">
+<meta property="og:description" content="FakeXposed一个通用多功能的 Xposed 隐藏器，采用 Native 与 Java 结合来做到双向屏蔽检测，提供高度自由化为每个应用配置不同属性。它不仅仅局限于屏蔽 Xposed 检测，还提供更多更加高级的功能，如 maps 文件自定义屏蔽各种检测、完整的文件重定向功能、访问权限控制、JNI 方法监控、动态符号查找屏蔽 dlsym 等等，还可以提供给其它模块在进程内动态添加或修改配置。开">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.com/sanfengAndroid/FakeXposed/capture/cn/home.png">
+<meta property="og:image" content="https://github.com/sanfengAndroid/FakeXposed/capture/cn/package_configuration.png">
+<meta property="og:image" content="https://github.com/sanfengAndroid/FakeXposed/capture/cn/package_hidden.png">
+<meta property="og:image" content="https://github.com/sanfengAndroid/FakeXposed/capture/cn/dlsym_hidden.png">
+<meta property="article:published_time" content="2021-02-20T08:39:31.000Z">
+<meta property="article:modified_time" content="2021-02-21T13:53:52.494Z">
+<meta property="article:author" content="sanfengAndroid">
+<meta property="article:tag" content="Android Hook">
+<meta property="article:tag" content="PLT Hook">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://github.com/sanfengAndroid/FakeXposed/capture/cn/home.png">
+
+<link rel="canonical" href="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>FakeXposed原理分析 | sanfengAndroid逆向安全</title>
+  
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?d586a9e0285213e68e6730829112c9c2";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">sanfengAndroid逆向安全</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Android reverse & security</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/sanfengAndroid" class="github-corner" title="关注我的GitHub" aria-label="关注我的GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="sanfengAndroid">
+      <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="sanfengAndroid逆向安全">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FakeXposed原理分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-20 16:39:31" itemprop="dateCreated datePublished" datetime="2021-02-20T16:39:31+08:00">2021-02-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-21 21:53:52" itemprop="dateModified" datetime="2021-02-21T21:53:52+08:00">2021-02-21</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>22k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>20 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="FakeXposed"><a href="#FakeXposed" class="headerlink" title="FakeXposed"></a><a href="https://github.com/sanfengAndroid/FakeXposed">FakeXposed</a></h2><p>一个通用多功能的 <code>Xposed</code> 隐藏器，采用 <code>Native</code> 与 <code>Java</code> 结合来做到双向屏蔽检测，提供高度自由化为每个应用配置不同属性。它不仅仅局限于屏蔽 <code>Xposed</code> 检测，还提供更多更加高级的功能，如 <code>maps</code> 文件自定义屏蔽各种检测、完整的文件重定向功能、访问权限控制、<code>JNI</code> 方法监控、动态符号查找屏蔽 <code>dlsym</code> 等等，还可以提供给其它模块在进程内动态添加或修改配置。开源地址 <a href="https://github.com/sanfengAndroid/FakeXposed">https://github.com/sanfengAndroid/FakeXposed</a></p>
+<a id="more"></a>
+
+<h2 id="原理简要介绍"><a href="#原理简要介绍" class="headerlink" title="原理简要介绍"></a>原理简要介绍</h2><ul>
+<li><code>Native Hook</code> 使用我的另一开源项目 <a href="https://github.com/sanfengAndroid/fake-linker">fake-linker</a>，<code>Java Hook</code> 使用 <code>Xposed</code> 框架，大部分功能都是由 <code>Native Hook</code> 来完成，<code>Xposed</code> 不限于原版 <code>Xposed</code>、<code>EdXposed</code>、<code>VirtualXposed</code>等等</li>
+<li>内部提供 <code>类</code>、<code>堆栈类</code>、<code>应用</code>、<code>环境变量</code>、<code>全局系统属性</code>、<code>Android Global属性</code>、<code>Runtime.exec拦截</code>、<code>文件访问/重定向等</code>、<code>符号拦截</code>，各种属性的隐藏和修改，下面我将简单介绍一些原理，代码都是基于Android最新源码主分支，旧分支一些变化不是太大自行分析即可</li>
+</ul>
+<h2 id="类-堆栈类隐藏"><a href="#类-堆栈类隐藏" class="headerlink" title="类/堆栈类隐藏"></a>类/堆栈类隐藏</h2><ul>
+<li>Hook <code>Class.forName()</code>、<code>ClassLoader.loadClass()</code>、<code>Throwable.getStackTrace()</code> 方法，判断隐藏类加载则抛出异常或删除该元素。目前我在测试 <code>EdXposed</code> 中只有部分情况会走该回调，可能框架处理了有关部分</li>
+</ul>
+<h2 id="应用-组件隐藏"><a href="#应用-组件隐藏" class="headerlink" title="应用/组件隐藏"></a>应用/组件隐藏</h2><ul>
+<li>使用动态代理 <code>PackageManager</code>、<code>ActivityManager</code>、<code>ActivityTaskManager</code>屏蔽常见会使用到获取其它应用属性的方法，如：<code>getInstalledPackages</code>、<code>getInstalledApplications</code>、<code>getRunningServices</code>、<code>getTasks</code>等等。应用进程本身就是通过 <code>Binder</code> 与 <code>system_server</code> 服务进程通信进程内只存在一个 <code>IBinger</code> 对象，因此非常适合使用动态代理，这里屏蔽掉几乎所有能够访问其它应用的方式，具体查看源码<a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/java/com/sanfengandroid/xp/hooks/HookSystemComponent.java">HookSystemComponent</a>。</li>
+<li><code>PackageManager</code> 源码在 <a target="_blank" rel="noopener" href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/ActivityThread.java;l=2185;bpv=0;bpt=0">ActivityThread.getPackageManager</a><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">volatile</span> IPackageManager sPackageManager;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> IPackageManager <span class="title">getPackageManager</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (sPackageManager != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> sPackageManager;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">final</span> IBinder b = ServiceManager.getService(<span class="string">&quot;package&quot;</span>);</span><br><span class="line">  sPackageManager = IPackageManager.Stub.asInterface(b);</span><br><span class="line">  <span class="keyword">return</span> sPackageManager;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+因此只需要使用反射修改 <code>sPackageManager</code> 静态变量即可</li>
+<li><code>ActivityManager</code> 源码 <code>AndroidO</code> 以上在 <a target="_blank" rel="noopener" href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/app/ActivityManager.java;drc=master;l=4553?q=ActivityManager&ss=android/platform/superproject">ActivityManager.IActivityManagerSingleton</a>，<code>AndroidO</code> 以下在 <code>ActivityManagerNative.gDefault</code>，都是一个单例对象<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Singleton&lt;IActivityManager&gt; IActivityManagerSingleton =</span><br><span class="line">  <span class="keyword">new</span> Singleton&lt;IActivityManager&gt;() &#123;</span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">protected</span> IActivityManager <span class="title">create</span><span class="params">()</span> </span>&#123;</span><br><span class="line">          <span class="keyword">final</span> IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE);</span><br><span class="line">          <span class="keyword">final</span> IActivityManager am = IActivityManager.Stub.asInterface(b);</span><br><span class="line">          <span class="keyword">return</span> am;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;;</span><br></pre></td></tr></table></figure>
+同样反射修改 <code>Singleton</code> 里面的对象即可</li>
+<li><code>ActivityTaskManager</code> 是 <code>AndroidQ </code> 以上新增的一个服务，修改方法同 <code>ActivityManager</code></li>
+</ul>
+<h2 id="环境变量修改"><a href="#环境变量修改" class="headerlink" title="环境变量修改"></a>环境变量修改</h2><ul>
+<li><code>Java</code> 调用 <code>System.getenv()</code>、<code>System.getenv(String)</code> 源码如下<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> java.util.<span class="function">Map&lt;String,String&gt; <span class="title">getenv</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  SecurityManager sm = getSecurityManager();</span><br><span class="line">  <span class="keyword">if</span> (sm != <span class="keyword">null</span>) &#123;</span><br><span class="line">      sm.checkPermission(<span class="keyword">new</span> RuntimePermission(<span class="string">&quot;getenv.*&quot;</span>));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> ProcessEnvironment.getenv();</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getenv</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (name == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException(<span class="string">&quot;name == null&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> Libcore.os.getenv(name);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+其最终调用两个函数 <code>Libcore.os.environ()</code>、<code>Libcore.os.getenv(String)</code><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Libcore</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="title">Libcore</span><span class="params">()</span> </span>&#123; &#125;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> Os rawOs = <span class="keyword">new</span> Linux();</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">volatile</span> Os os = <span class="keyword">new</span> BlockGuardOs(rawOs);</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Linux</span> <span class="keyword">implements</span> <span class="title">Os</span> </span>&#123;</span><br><span class="line">  Linux() &#123; &#125;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">native</span> String <span class="title">getenv</span><span class="params">(String name)</span></span>;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">native</span> String[] environ();</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+不同版本 <code>Libcore.os</code> 的实现对象类名不一样，但是区别很小，而 <code>native</code> 中访问到是 libc导出变量 <code>environ</code>、导出函数 <code>getenv</code>，因此通过 <code>Native Hook</code> 拦截 <code>getenv</code> 函数即可拦截对应Java <code>System.getenv(String)</code>调用，而 <code>System.getenv()</code> 调用是直接使用 <code>environ</code> 变量，因此暂时采用<code>Java Hook</code>替换该<code>Map</code>对象，通常情况下应用是很少使用到 <code>System.getenv</code> 非系统环境变量的，一些软件检测才会使用，因此后续可能会直接修改 <code>environ</code> 变量中的值</li>
+</ul>
+<h2 id="全局属性SystemProperties修改"><a href="#全局属性SystemProperties修改" class="headerlink" title="全局属性SystemProperties修改"></a>全局属性SystemProperties修改</h2><ul>
+<li><code>Java</code> 反射使用 <code>SystemProperties.get</code> 系列方法<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@NonNull</span></span><br><span class="line"><span class="meta">@SystemApi</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">get</span><span class="params">(<span class="meta">@NonNull</span> String key, <span class="meta">@Nullable</span> String def)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (TRACK_KEY_ACCESS) onKeyAccess(key);</span><br><span class="line">    <span class="keyword">return</span> native_get(key, def);</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="meta">@FastNative</span></span><br><span class="line"><span class="meta">@UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">native</span> String <span class="title">native_get</span><span class="params">(String key, String def)</span></span>;</span><br></pre></td></tr></table></figure>
+调用 <a target="_blank" rel="noopener" href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/jni/android_os_SystemProperties.cpp">android_os_SystemProperties.cpp</a> 中的方法<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Functor&gt;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">ReadProperty</span><span class="params">(<span class="keyword">const</span> prop_info* prop, Functor&amp;&amp; functor)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> defined(__BIONIC__)</span></span><br><span class="line">    <span class="keyword">auto</span> thunk = [](<span class="keyword">void</span>* cookie,</span><br><span class="line">                    <span class="keyword">const</span> <span class="keyword">char</span>* <span class="comment">/*name*/</span>,</span><br><span class="line">                    <span class="keyword">const</span> <span class="keyword">char</span>* value,</span><br><span class="line">                    <span class="keyword">uint32_t</span> <span class="comment">/*serial*/</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::forward&lt;Functor&gt;(*<span class="keyword">static_cast</span>&lt;Functor*&gt;(cookie))(value);</span><br><span class="line">    &#125;;</span><br><span class="line">    __system_property_read_callback(prop, thunk, &amp;functor);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">    LOG(FATAL) &lt;&lt; <span class="string">&quot;fast property access supported only on device&quot;</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Functor&gt;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">ReadProperty</span><span class="params">(JNIEnv* env, jstring keyJ, Functor&amp;&amp; functor)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="function">ScopedUtfChars <span class="title">key</span><span class="params">(env, keyJ)</span></span>;</span><br><span class="line">    <span class="keyword">if</span> (!key.c_str()) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> defined(__BIONIC__)</span></span><br><span class="line">    <span class="keyword">const</span> prop_info* prop = __system_property_find(key.c_str());</span><br><span class="line">    <span class="keyword">if</span> (!prop) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ReadProperty(prop, <span class="built_in">std</span>::forward&lt;Functor&gt;(functor));</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">    <span class="built_in">std</span>::forward&lt;Functor&gt;(functor)(</span><br><span class="line">        android::base::GetProperty(key.c_str(), <span class="string">&quot;&quot;</span>).c_str());</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">jstring <span class="title">SystemProperties_getSS</span><span class="params">(JNIEnv* env, jclass clazz, jstring keyJ,</span></span></span><br><span class="line"><span class="function"><span class="params">                             jstring defJ)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    jstring ret = defJ;</span><br><span class="line">    ReadProperty(env, keyJ, [&amp;](<span class="keyword">const</span> <span class="keyword">char</span>* value) &#123;</span><br><span class="line">        <span class="keyword">if</span> (value[<span class="number">0</span>]) &#123;</span><br><span class="line">            ret = env-&gt;NewStringUTF(value);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">if</span> (ret == <span class="literal">nullptr</span> &amp;&amp; !env-&gt;ExceptionCheck()) &#123;</span><br><span class="line">      ret = env-&gt;NewStringUTF(<span class="string">&quot;&quot;</span>);  <span class="comment">// Legacy behavior</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">register_android_os_SystemProperties</span><span class="params">(JNIEnv *env)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">const</span> JNINativeMethod method_table[] = &#123;</span><br><span class="line">        &#123; <span class="string">&quot;native_get&quot;</span>,</span><br><span class="line">          <span class="string">&quot;(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_getSS &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_int&quot;</span>, <span class="string">&quot;(Ljava/lang/String;I)I&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_integral&lt;jint&gt; &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_long&quot;</span>, <span class="string">&quot;(Ljava/lang/String;J)J&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_integral&lt;jlong&gt; &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_boolean&quot;</span>, <span class="string">&quot;(Ljava/lang/String;Z)Z&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_boolean &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_find&quot;</span>,</span><br><span class="line">          <span class="string">&quot;(Ljava/lang/String;)J&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_find &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get&quot;</span>,</span><br><span class="line">          <span class="string">&quot;(J)Ljava/lang/String;&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_getH &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_int&quot;</span>, <span class="string">&quot;(JI)I&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_integralH&lt;jint&gt; &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_long&quot;</span>, <span class="string">&quot;(JJ)J&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_integralH&lt;jlong&gt; &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_get_boolean&quot;</span>, <span class="string">&quot;(JZ)Z&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_get_booleanH &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_set&quot;</span>, <span class="string">&quot;(Ljava/lang/String;Ljava/lang/String;)V&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_set &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_add_change_callback&quot;</span>, <span class="string">&quot;()V&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_add_change_callback &#125;,</span><br><span class="line">        &#123; <span class="string">&quot;native_report_sysprop_change&quot;</span>, <span class="string">&quot;()V&quot;</span>,</span><br><span class="line">          (<span class="keyword">void</span>*) SystemProperties_report_sysprop_change &#125;,</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">return</span> RegisterMethodsOrDie(env, <span class="string">&quot;android/os/SystemProperties&quot;</span>,</span><br><span class="line">                                method_table, NELEM(method_table));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+而它调用了 <code>libc.so</code> 中的 <code>__system_property_find</code>，<code>__system_property_read_callback</code>，在低版本中获取属性也使用到了 <code>__system_property_get</code> 方法，因此采用 <code>Native Hook</code> 以上这三个方法，这里也要注意不同版本在不同动态库中实现</li>
+</ul>
+<h2 id="Android-Global属性修改"><a href="#Android-Global属性修改" class="headerlink" title="Android Global属性修改"></a>Android Global属性修改</h2><ul>
+<li>采用Java Hook <code>Global.getString</code> 方法修改</li>
+</ul>
+<h2 id="Runtime-exec拦截"><a href="#Runtime-exec拦截" class="headerlink" title="Runtime.exec拦截"></a>Runtime.exec拦截</h2><ul>
+<li>源码分析如下<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Runtime</span></span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> Process <span class="title">exec</span><span class="params">(String[] cmdarray, String[] envp, File dir)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ProcessBuilder(cmdarray)</span><br><span class="line">        .environment(envp)</span><br><span class="line">        .directory(dir)</span><br><span class="line">        .start();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ProcessBuilder</span></span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> Process <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> ProcessImpl.start(cmdarray,</span><br><span class="line">                                  environment,</span><br><span class="line">                                  dir,</span><br><span class="line">                                  redirects,</span><br><span class="line">                                  redirectErrorStream);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException | IllegalArgumentException e) &#123;</span><br><span class="line">       ...</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ProcessImpl</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">static</span> Process <span class="title">start</span><span class="params">(String[] cmdarray,</span></span></span><br><span class="line"><span class="function"><span class="params">                       java.util.Map&lt;String,String&gt; environment,</span></span></span><br><span class="line"><span class="function"><span class="params">                       String dir,</span></span></span><br><span class="line"><span class="function"><span class="params">                       ProcessBuilder.Redirect[] redirects,</span></span></span><br><span class="line"><span class="function"><span class="params">                       <span class="keyword">boolean</span> redirectErrorStream)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> IOException</span></span><br><span class="line"><span class="function">  </span>&#123;</span><br><span class="line">      <span class="keyword">assert</span> cmdarray != <span class="keyword">null</span> &amp;&amp; cmdarray.length &gt; <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// Convert arguments to a contiguous block; it&#x27;s easier to do</span></span><br><span class="line">      ...</span><br><span class="line">      <span class="comment">// 复制环境变量</span></span><br><span class="line"></span><br><span class="line">      FileInputStream  f0 = <span class="keyword">null</span>;</span><br><span class="line">      FileOutputStream f1 = <span class="keyword">null</span>;</span><br><span class="line">      FileOutputStream f2 = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">          <span class="keyword">if</span> (redirects == <span class="keyword">null</span>) &#123;</span><br><span class="line">              std_fds = <span class="keyword">new</span> <span class="keyword">int</span>[] &#123; -<span class="number">1</span>, -<span class="number">1</span>, -<span class="number">1</span> &#125;;</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// 重定向流</span></span><br><span class="line">            ...</span><br><span class="line">          &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> UNIXProcess</span><br><span class="line">          (toCString(cmdarray[<span class="number">0</span>]),</span><br><span class="line">           argBlock, args.length,</span><br><span class="line">           envBlock, envc[<span class="number">0</span>],</span><br><span class="line">           toCString(dir),</span><br><span class="line">               std_fds,</span><br><span class="line">           redirectErrorStream);</span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">          <span class="comment">// In theory, close() can throw IOException</span></span><br><span class="line">          <span class="comment">// (although it is rather unlikely to happen here)</span></span><br><span class="line">          <span class="keyword">try</span> &#123; <span class="keyword">if</span> (f0 != <span class="keyword">null</span>) f0.close(); &#125;</span><br><span class="line">          <span class="keyword">finally</span> &#123;</span><br><span class="line">              <span class="keyword">try</span> &#123; <span class="keyword">if</span> (f1 != <span class="keyword">null</span>) f1.close(); &#125;</span><br><span class="line">              <span class="keyword">finally</span> &#123; <span class="keyword">if</span> (f2 != <span class="keyword">null</span>) f2.close(); &#125;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">UNIXProcess</span> <span class="keyword">extends</span> <span class="title">Process</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">native</span> <span class="keyword">int</span> <span class="title">forkAndExec</span><span class="params">(<span class="keyword">byte</span>[] prog,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">byte</span>[] argBlock, <span class="keyword">int</span> argc,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">byte</span>[] envBlock, <span class="keyword">int</span> envc,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">byte</span>[] dir,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">int</span>[] fds,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">boolean</span> redirectErrorStream)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  UNIXProcess(<span class="keyword">final</span> <span class="keyword">byte</span>[] prog,</span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">byte</span>[] argBlock, <span class="keyword">final</span> <span class="keyword">int</span> argc,</span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">byte</span>[] envBlock, <span class="keyword">final</span> <span class="keyword">int</span> envc,</span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">byte</span>[] dir,</span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">int</span>[] fds,</span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">boolean</span> redirectErrorStream)</span><br><span class="line">          <span class="keyword">throws</span> IOException &#123;</span><br><span class="line"></span><br><span class="line">      pid = forkAndExec(prog,</span><br><span class="line">                        argBlock, argc,</span><br><span class="line">                        envBlock, envc,</span><br><span class="line">                        dir,</span><br><span class="line">                        fds,</span><br><span class="line">                        redirectErrorStream);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">          doPrivileged(<span class="keyword">new</span> PrivilegedExceptionAction&lt;Void&gt;() &#123;</span><br><span class="line">              <span class="function"><span class="keyword">public</span> Void <span class="title">run</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">                  initStreams(fds);</span><br><span class="line">                  <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">              &#125;&#125;);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (PrivilegedActionException ex) &#123;</span><br><span class="line">          <span class="keyword">throw</span> (IOException) ex.getException();</span><br><span class="line">      &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+通过跟踪 <code>Runtime.exec()</code> -&gt; <code>ProcessBuilder.start()</code> -&gt; <code>ProcessImpl.start()</code> -&gt; <code>new UNIXProcess()</code> -&gt; <code>UNIXProcess.forkAndExec()</code> 最终执行 <code>UNIXProcess.forkAndExec</code> 产生子进程，继续跟踪 <code>native</code><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">JNIEXPORT jint JNICALL</span><br><span class="line">UNIXProcess_forkAndExec(JNIEnv *env,</span><br><span class="line">                                      jobject process,</span><br><span class="line">                                      jbyteArray prog,</span><br><span class="line">                                      jbyteArray argBlock, jint argc,</span><br><span class="line">                                      jbyteArray envBlock, jint envc,</span><br><span class="line">                                      jbyteArray dir,</span><br><span class="line">                                      jintArray std_fds,</span><br><span class="line">                                      jboolean redirectErrorStream)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// 上面设置环境变量，重定向输入输出流</span></span><br><span class="line">    <span class="comment">// startChild关键函数启动子进程</span></span><br><span class="line">    resultPid = startChild(c);</span><br><span class="line">    assert(resultPid != <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (resultPid &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        throwIOException(env, errno, START_CHILD_SYSTEM_CALL <span class="string">&quot; failed&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> Catch;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    restartableClose(fail[<span class="number">1</span>]); fail[<span class="number">1</span>] = <span class="number">-1</span>; <span class="comment">/* See: WhyCantJohnnyExec */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">switch</span> (readFully(fail[<span class="number">0</span>], &amp;errnum, <span class="keyword">sizeof</span>(errnum))) &#123;</span><br><span class="line">    <span class="keyword">case</span> <span class="number">0</span>: <span class="keyword">break</span>; <span class="comment">/* Exec succeeded */</span></span><br><span class="line">    <span class="function"><span class="keyword">case</span> <span class="title">sizeof</span><span class="params">(errnum)</span>:</span></span><br><span class="line"><span class="function">        <span class="title">waitpid</span><span class="params">(resultPid, <span class="literal">NULL</span>, <span class="number">0</span>)</span></span>;</span><br><span class="line">        throwIOException(env, errnum, <span class="string">&quot;Exec failed&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> Catch;</span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        throwIOException(env, errno, <span class="string">&quot;Read failed&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> Catch;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    fds[<span class="number">0</span>] = (in [<span class="number">1</span>] != <span class="number">-1</span>) ? in [<span class="number">1</span>] : <span class="number">-1</span>;</span><br><span class="line">    fds[<span class="number">1</span>] = (out[<span class="number">0</span>] != <span class="number">-1</span>) ? out[<span class="number">0</span>] : <span class="number">-1</span>;</span><br><span class="line">    fds[<span class="number">2</span>] = (err[<span class="number">0</span>] != <span class="number">-1</span>) ? err[<span class="number">0</span>] : <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">Finally:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> START_CHILD_USE_CLONE</span></span><br><span class="line">    <span class="built_in">free</span>(c-&gt;clone_stack);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Always clean up the child&#x27;s side of the pipes */</span></span><br><span class="line">    closeSafely(in [<span class="number">0</span>]);</span><br><span class="line">    closeSafely(out[<span class="number">1</span>]);</span><br><span class="line">    closeSafely(err[<span class="number">1</span>]);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Always clean up fail descriptors */</span></span><br><span class="line">    closeSafely(fail[<span class="number">0</span>]);</span><br><span class="line">    closeSafely(fail[<span class="number">1</span>]);</span><br><span class="line"></span><br><span class="line">    releaseBytes(env, prog,     pprog);</span><br><span class="line">    releaseBytes(env, argBlock, pargBlock);</span><br><span class="line">    releaseBytes(env, envBlock, penvBlock);</span><br><span class="line">    releaseBytes(env, dir,      c-&gt;pdir);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">free</span>(c-&gt;argv);</span><br><span class="line">    <span class="built_in">free</span>(c-&gt;envv);</span><br><span class="line">    <span class="built_in">free</span>(c);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fds != <span class="literal">NULL</span>)</span><br><span class="line">        (*env)-&gt;ReleaseIntArrayElements(env, std_fds, fds, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> resultPid;</span><br><span class="line"></span><br><span class="line">Catch:</span><br><span class="line">    <span class="comment">/* Clean up the parent&#x27;s side of the pipes in case of failure only */</span></span><br><span class="line">    closeSafely(in [<span class="number">1</span>]);</span><br><span class="line">    closeSafely(out[<span class="number">0</span>]);</span><br><span class="line">    closeSafely(err[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">goto</span> Finally;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+最关键函数 <code>startChild</code> 继续跟踪<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">pid_t</span></span><br><span class="line">startChild(ChildStuff *c) &#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> START_CHILD_USE_CLONE</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> START_CHILD_CLONE_STACK_SIZE (64 * 1024)</span></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    * See clone(2).</span></span><br><span class="line"><span class="comment">    * Instead of worrying about which direction the stack grows, just</span></span><br><span class="line"><span class="comment">    * allocate twice as much and start the stack in the middle.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">if</span> ((c-&gt;clone_stack = <span class="built_in">malloc</span>(<span class="number">2</span> * START_CHILD_CLONE_STACK_SIZE)) == <span class="literal">NULL</span>)</span><br><span class="line">        <span class="comment">/* errno will be set to ENOMEM */</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">return</span> clone(childProcess,</span><br><span class="line">                c-&gt;clone_stack + START_CHILD_CLONE_STACK_SIZE,</span><br><span class="line">                CLONE_VFORK | CLONE_VM | SIGCHLD, c);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">  <span class="meta">#<span class="meta-keyword">if</span> START_CHILD_USE_VFORK</span></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    * We separate the call to vfork into a separate function to make</span></span><br><span class="line"><span class="comment">    * very sure to keep stack of child from corrupting stack of parent,</span></span><br><span class="line"><span class="comment">    * as suggested by the scary gcc warning:</span></span><br><span class="line"><span class="comment">    *  warning: variable &#x27;foo&#x27; might be clobbered by &#x27;longjmp&#x27; or &#x27;vfork&#x27;</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">pid_t</span> resultPid = vfork();</span><br><span class="line">  <span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    * From Solaris fork(2): In Solaris 10, a call to fork() is</span></span><br><span class="line"><span class="comment">    * identical to a call to fork1(); only the calling thread is</span></span><br><span class="line"><span class="comment">    * replicated in the child process. This is the POSIX-specified</span></span><br><span class="line"><span class="comment">    * behavior for fork().</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">pid_t</span> resultPid = fork();</span><br><span class="line">  <span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">    <span class="keyword">if</span> (resultPid == <span class="number">0</span>)</span><br><span class="line">        <span class="comment">// 子进程处理对应命令</span></span><br><span class="line">        childProcess(c);</span><br><span class="line">    assert(resultPid != <span class="number">0</span>);  <span class="comment">/* childProcess never returns */</span></span><br><span class="line">    <span class="keyword">return</span> resultPid;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">/* ! START_CHILD_USE_CLONE */</span></span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+调用 <code>clone</code>、<code>vfork</code>、<code>fork</code> 函数产生子进程然后调用 <code>childProcess(c)</code> 处理命令，这里使用哪一个函数产生子进程不是重点，我们关心的是子进程如何执行命令<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">childProcess(<span class="keyword">void</span> *arg)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">const</span> ChildStuff* p = (<span class="keyword">const</span> ChildStuff*) arg;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Close the parent sides of the pipes.</span></span><br><span class="line"><span class="comment">      Closing pipe fds here is redundant, since closeDescriptors()</span></span><br><span class="line"><span class="comment">      would do it anyways, but a little paranoia is a good thing. */</span></span><br><span class="line">    <span class="keyword">if</span> ((closeSafely(p-&gt;in[<span class="number">1</span>])   == <span class="number">-1</span>) ||</span><br><span class="line">        (closeSafely(p-&gt;out[<span class="number">0</span>])  == <span class="number">-1</span>) ||</span><br><span class="line">        (closeSafely(p-&gt;err[<span class="number">0</span>])  == <span class="number">-1</span>) ||</span><br><span class="line">        (closeSafely(p-&gt;fail[<span class="number">0</span>]) == <span class="number">-1</span>))</span><br><span class="line">        <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Give the child sides of the pipes the right fileno&#x27;s. */</span></span><br><span class="line">    <span class="comment">/* Note: it is possible for in[0] == 0 */</span></span><br><span class="line">    <span class="keyword">if</span> ((moveDescriptor(p-&gt;in[<span class="number">0</span>] != <span class="number">-1</span> ?  p-&gt;in[<span class="number">0</span>] : p-&gt;fds[<span class="number">0</span>],</span><br><span class="line">                        STDIN_FILENO) == <span class="number">-1</span>) ||</span><br><span class="line">        (moveDescriptor(p-&gt;out[<span class="number">1</span>]!= <span class="number">-1</span> ? p-&gt;out[<span class="number">1</span>] : p-&gt;fds[<span class="number">1</span>],</span><br><span class="line">                        STDOUT_FILENO) == <span class="number">-1</span>))</span><br><span class="line">        <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;redirectErrorStream) &#123;</span><br><span class="line">        <span class="keyword">if</span> ((closeSafely(p-&gt;err[<span class="number">1</span>]) == <span class="number">-1</span>) ||</span><br><span class="line">            (restartableDup2(STDOUT_FILENO, STDERR_FILENO) == <span class="number">-1</span>))</span><br><span class="line">            <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (moveDescriptor(p-&gt;err[<span class="number">1</span>] != <span class="number">-1</span> ? p-&gt;err[<span class="number">1</span>] : p-&gt;fds[<span class="number">2</span>],</span><br><span class="line">                          STDERR_FILENO) == <span class="number">-1</span>)</span><br><span class="line">            <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (moveDescriptor(p-&gt;fail[<span class="number">1</span>], FAIL_FILENO) == <span class="number">-1</span>)</span><br><span class="line">        <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* close everything */</span></span><br><span class="line">    <span class="keyword">if</span> (closeDescriptors() == <span class="number">0</span>) &#123; <span class="comment">/* failed,  close the old way */</span></span><br><span class="line">        <span class="keyword">int</span> max_fd = (<span class="keyword">int</span>)sysconf(_SC_OPEN_MAX);</span><br><span class="line">        <span class="keyword">int</span> fd;</span><br><span class="line">        <span class="keyword">for</span> (fd = FAIL_FILENO + <span class="number">1</span>; fd &lt; max_fd; fd++)</span><br><span class="line">            <span class="keyword">if</span> (restartableClose(fd) == <span class="number">-1</span> &amp;&amp; errno != EBADF)</span><br><span class="line">                <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* change to the new working directory */</span></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;pdir != <span class="literal">NULL</span> &amp;&amp; chdir(p-&gt;pdir) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fcntl(FAIL_FILENO, F_SETFD, FD_CLOEXEC) == <span class="number">-1</span>)</span><br><span class="line">        <span class="keyword">goto</span> WhyCantJohnnyExec;</span><br><span class="line">    <span class="comment">// 最终调用 JDK_execvpe 执行命令</span></span><br><span class="line">    JDK_execvpe(p-&gt;argv[<span class="number">0</span>], p-&gt;argv, p-&gt;envv);</span><br><span class="line"></span><br><span class="line">WhyCantJohnnyExec:</span><br><span class="line">    <span class="comment">/* We used to go to an awful lot of trouble to predict whether the</span></span><br><span class="line"><span class="comment">    * child would fail, but there is no reliable way to predict the</span></span><br><span class="line"><span class="comment">    * success of an operation without *trying* it, and there&#x27;s no way</span></span><br><span class="line"><span class="comment">    * to try a chdir or exec in the parent.  Instead, all we need is a</span></span><br><span class="line"><span class="comment">    * way to communicate any failure back to the parent.  Easy; we just</span></span><br><span class="line"><span class="comment">    * send the errno back to the parent over a pipe in case of failure.</span></span><br><span class="line"><span class="comment">    * The tricky thing is, how do we communicate the *success* of exec?</span></span><br><span class="line"><span class="comment">    * We use FD_CLOEXEC together with the fact that a read() on a pipe</span></span><br><span class="line"><span class="comment">    * yields EOF when the write ends (we have two of them!) are closed.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">int</span> errnum = errno;</span><br><span class="line">        restartableWrite(FAIL_FILENO, &amp;errnum, <span class="keyword">sizeof</span>(errnum));</span><br><span class="line">    &#125;</span><br><span class="line">    restartableClose(FAIL_FILENO);</span><br><span class="line">    _exit(<span class="number">-1</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;  <span class="comment">/* Suppress warning &quot;no return value from function&quot; */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">JDK_execvpe(<span class="keyword">const</span> <span class="keyword">char</span> *file,</span><br><span class="line">            <span class="keyword">const</span> <span class="keyword">char</span> *argv[],</span><br><span class="line">            <span class="keyword">const</span> <span class="keyword">char</span> *<span class="keyword">const</span> envp[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (envp == <span class="literal">NULL</span> || (<span class="keyword">char</span> **) envp == environ) &#123;</span><br><span class="line">        execvp(file, (<span class="keyword">char</span> **) argv);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (*file == <span class="string">&#x27;\0&#x27;</span>) &#123;</span><br><span class="line">        errno = ENOENT;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">strchr</span>(file, <span class="string">&#x27;/&#x27;</span>) != <span class="literal">NULL</span>) &#123;</span><br><span class="line">        execve_with_shell_fallback(file, argv, envp);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">/* We must search PATH (parent&#x27;s, not child&#x27;s) */</span></span><br><span class="line">        <span class="keyword">char</span> expanded_file[PATH_MAX];</span><br><span class="line">        <span class="keyword">int</span> filelen = <span class="built_in">strlen</span>(file);</span><br><span class="line">        <span class="keyword">int</span> sticky_errno = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">char</span> * <span class="keyword">const</span> * dirs;</span><br><span class="line">        <span class="keyword">for</span> (dirs = parentPathv; *dirs; dirs++) &#123;</span><br><span class="line">            <span class="keyword">const</span> <span class="keyword">char</span> * dir = *dirs;</span><br><span class="line">            <span class="keyword">int</span> dirlen = <span class="built_in">strlen</span>(dir);</span><br><span class="line">            <span class="keyword">if</span> (filelen + dirlen + <span class="number">1</span> &gt;= PATH_MAX) &#123;</span><br><span class="line">                errno = ENAMETOOLONG;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">memcpy</span>(expanded_file, dir, dirlen);</span><br><span class="line">            <span class="built_in">memcpy</span>(expanded_file + dirlen, file, filelen);</span><br><span class="line">            expanded_file[dirlen + filelen] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">            execve_with_shell_fallback(expanded_file, argv, envp);</span><br><span class="line">            <span class="comment">/* There are 3 responses to various classes of errno:</span></span><br><span class="line"><span class="comment">            * return immediately, continue (especially for ENOENT),</span></span><br><span class="line"><span class="comment">            * or continue with &quot;sticky&quot; errno.</span></span><br><span class="line"><span class="comment">            *</span></span><br><span class="line"><span class="comment">            * From exec(3):</span></span><br><span class="line"><span class="comment">            *</span></span><br><span class="line"><span class="comment">            * If permission is denied for a file (the attempted</span></span><br><span class="line"><span class="comment">            * execve returned EACCES), these functions will continue</span></span><br><span class="line"><span class="comment">            * searching the rest of the search path.  If no other</span></span><br><span class="line"><span class="comment">            * file is found, however, they will return with the</span></span><br><span class="line"><span class="comment">            * global variable errno set to EACCES.</span></span><br><span class="line"><span class="comment">            */</span></span><br><span class="line">            <span class="keyword">switch</span> (errno) &#123;</span><br><span class="line">            <span class="keyword">case</span> EACCES:</span><br><span class="line">                sticky_errno = errno;</span><br><span class="line">                <span class="comment">/* FALLTHRU */</span></span><br><span class="line">            <span class="keyword">case</span> ENOENT:</span><br><span class="line">            <span class="keyword">case</span> ENOTDIR:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ELOOP</span></span><br><span class="line">            <span class="keyword">case</span> ELOOP:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ESTALE</span></span><br><span class="line">            <span class="keyword">case</span> ESTALE:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ENODEV</span></span><br><span class="line">            <span class="keyword">case</span> ENODEV:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ETIMEDOUT</span></span><br><span class="line">            <span class="keyword">case</span> ETIMEDOUT:</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">                <span class="keyword">break</span>; <span class="comment">/* Try other directories in PATH */</span></span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (sticky_errno != <span class="number">0</span>)</span><br><span class="line">            errno = sticky_errno;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">execve_with_shell_fallback(<span class="keyword">const</span> <span class="keyword">char</span> *file,</span><br><span class="line">                          <span class="keyword">const</span> <span class="keyword">char</span> *argv[],</span><br><span class="line">                          <span class="keyword">const</span> <span class="keyword">char</span> *<span class="keyword">const</span> envp[])</span><br><span class="line">&#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> START_CHILD_USE_CLONE || START_CHILD_USE_VFORK</span></span><br><span class="line">    <span class="comment">/* shared address space; be very careful. */</span></span><br><span class="line">    execve(file, (<span class="keyword">char</span> **) argv, (<span class="keyword">char</span> **) envp);</span><br><span class="line">    <span class="keyword">if</span> (errno == ENOEXEC)</span><br><span class="line">        execve_as_traditional_shell_script(file, argv, envp);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">    <span class="comment">/* unshared address space; we can mutate environ. */</span></span><br><span class="line">    environ = (<span class="keyword">char</span> **) envp;</span><br><span class="line">    execvp(file, (<span class="keyword">char</span> **) argv);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+通过上面分析，最终调用 <code>JDK_execvpe</code> -&gt; <code>execve_with_shell_fallback</code> -&gt; <code>execve/execvp</code> 执行命令，实际测试执行 <code>Runtime.exec</code> 最终执行到 <code>execvp</code> 中。由于 <code>fork</code> 子进程后会继承父进程的环境，因此也可通过 <code>Native Hook</code> 来拦截该函数，但是实际测试中如果拦截 <code>execvp</code> 会导致子进程一直无法结束，从而导致卡住，这里原因暂时不明，有知道的可以留言告诉我。因此还是老实采用 <code>Java Hook</code> 更底层方法 <code>java.lang.UNIXProcess</code> 构造方法，对于低版本 Hook <code>java.lang.ProcessManager.exec</code> 方法。基于此提供命令，参数替换，以及固定输入、输出、错误流。具体源码查看 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/java/com/sanfengandroid/xp/hooks/HookRuntime.java">HookRuntime</a></li>
+</ul>
+<h2 id="文件重定向-访问控制（核心）"><a href="#文件重定向-访问控制（核心）" class="headerlink" title="文件重定向/访问控制（核心）"></a>文件重定向/访问控制（核心）</h2><ul>
+<li>文件重定向/黑名单：<code>Native Hook</code> 与IO有关的方法，由于我们使用的 <code>PLT Hook</code> 因此要尽可能的包含全部函数<ul>
+<li>如 <code>openat</code>、<code>__openat</code>、<code>open</code>、<code>fopen</code> 等 <code>libc</code> 函数，<code>Java</code> 中的 <code>File</code> 使用调用到 <code>Libcore.os</code> 中，这与上面分析环境变量类似，因此只需要 <code>Hook</code> libc 中的IO函数即可，查看代码<a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_io.cpp">hook_io</a>。</li>
+<li><code>syscall</code> 函数，自己实现 <code>软中断系统调用</code> 的无法拦截，其 <code>inline Hook</code> 框架也无法拦截，只能通过修改内核或动态查找 <code>软中断系统调用</code> 然后再Hook，这种极个别情况忽略，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_syscall.cpp">hook_syscall</a></li>
+<li><code>exec</code> 簇执行函数，它会传入可执行文件路径，也需要重定向，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_exec.cpp">hook_exec</a></li>
+<li>与时间相关函数 <code>utimes</code>、<code>utime</code>、<code>lutimes</code>，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_time.cpp">hook_time</a></li>
+<li>与文件访问路径相关函数 <code>chdir</code>、<code>linkat</code>等，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_unistd.cpp">hook_unistd</a></li>
+<li>与文件状态相关函数 <code>fchmodat</code>、<code>fstatat</code>、<code>stat</code>等，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_stat.cpp">hook_stat</a></li>
+<li><code>maps</code> 文件过滤，基于文件重定向，当要访问 <code>maps</code> 文件时将修改掉需要过滤的数据然后将它重定向到缓存路径，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/io_redirect.cpp">io_redirect</a></li>
+<li>动态加载函数 <code>dlopen</code>、<code>android_dlopen_ext</code>，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_dlfcn.cpp">hook_dlfcn</a></li>
+</ul>
+</li>
+<li>文件权限控制<ul>
+<li><code>stat</code> <code>fstatat</code>、<code>access</code> 等函数，查看代码 <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_stat.cpp">hook_stat</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="符号隐藏"><a href="#符号隐藏" class="headerlink" title="符号隐藏"></a>符号隐藏</h2><ul>
+<li>Native Hook <code>dlsym</code> 函数，屏蔽一些符号查找和重定向 <code>libc</code> 库中的函数到 <code>Hook 模块</code> 中，查看代码  <a href="https://github.com/sanfengAndroid/FakeXposed/blob/main/app/src/main/cpp/hook/hook_dlfcn.cpp">hook_dlfcn</a></li>
+</ul>
+<h2 id="系统共享库查找"><a href="#系统共享库查找" class="headerlink" title="系统共享库查找"></a>系统共享库查找</h2><ol>
+<li>上面Hook的 <code>native</code> 方法都是 <code>libc</code> 中的导出方法，要让 <code>Native Hook</code> 生效我们则需要重定位那些已经加载过的动态库，其中系统中最主要使用的 <code>Libcore</code> 库，我们通过查找 <code>Android.bp</code>(旧版本 <code>Android.mk</code>)来查找共享库名称，如果没找到名称则目录一级一级的向上继续查找，下面与最新版 <code>Libcore</code> 为例，其它版本类似</li>
+</ol>
+<ul>
+<li>如上面频繁使用的 <code>libcore_io_Linux.cpp</code> 为例，源码路径在 <code>libcore/luni/src/main/native/libcore_io_Linux.cpp</code>，它所属的编译模块 <code>Android.bp(libcore/luni/src/main/native/Android.bp)</code>，有关配置如下<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">package &#123;</span><br><span class="line">    <span class="comment">// http://go/android-license-faq</span></span><br><span class="line">    <span class="comment">// A large-scale-change added &#x27;default_applicable_licenses&#x27; to import</span></span><br><span class="line">    <span class="comment">// the below license kinds from &quot;libcore_luni_license&quot;:</span></span><br><span class="line">    <span class="comment">//   SPDX-license-identifier-Apache-2.0</span></span><br><span class="line">    default_applicable_licenses: [<span class="string">&quot;libcore_luni_license&quot;</span>],</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">filegroup &#123;</span><br><span class="line">    name: <span class="string">&quot;luni_native_srcs&quot;</span>,</span><br><span class="line">    visibility: [</span><br><span class="line">        <span class="string">&quot;//libcore&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    srcs: [</span><br><span class="line">        <span class="string">&quot;ExecStrings.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;IcuUtilities.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;JniConstants.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;JniException.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;NetworkUtilities.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;Register.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;ZipUtilities.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;android_system_OsConstants.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;cbigint.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;java_lang_StringToReal.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;java_lang_invoke_MethodHandle.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;java_lang_invoke_VarHandle.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcore_math_NativeBN.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcore_icu_ICU.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcore_io_AsynchronousCloseMonitor.cpp&quot;</span>,</span><br><span class="line">        <span class="comment">// 这里包含我们需要拦截的源代码</span></span><br><span class="line">        <span class="string">&quot;libcore_io_Linux.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcore_io_Memory.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcore_util_NativeAllocationRegistry.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;org_apache_harmony_xml_ExpatParser.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;sun_misc_Unsafe.cpp&quot;</span>,</span><br><span class="line">        <span class="string">&quot;valueOf.cpp&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">filegroup &#123;</span><br><span class="line">    name: <span class="string">&quot;libandroidio_srcs&quot;</span>,</span><br><span class="line">    visibility: [</span><br><span class="line">        <span class="string">&quot;//libcore&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    srcs: [</span><br><span class="line">        <span class="string">&quot;AsynchronousCloseMonitor.cpp&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+这里没有找到模块名称，则继续向上级目录查找编译脚本，上层找到 <code>libcore/luni/Android.bp</code>，配置如下<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">package &#123;</span><br><span class="line">  default_applicable_licenses: [<span class="string">&quot;libcore_luni_license&quot;</span>],</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Added automatically by a large-scale-change</span></span><br><span class="line"><span class="comment">// http://go/android-license-faq</span></span><br><span class="line">license &#123;</span><br><span class="line">    name: <span class="string">&quot;libcore_luni_license&quot;</span>,</span><br><span class="line">    visibility: [<span class="string">&quot;:__subpackages__&quot;</span>],</span><br><span class="line">    license_kinds: [</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-Apache-2.0&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    license_text: [</span><br><span class="line">        <span class="string">&quot;license.html&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+还是没找到名称继续往上查找 <code>libcore/Android.bp</code><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">license &#123;</span><br><span class="line">    name: <span class="string">&quot;libcore_license&quot;</span>,</span><br><span class="line">    visibility: [<span class="string">&quot;:__subpackages__&quot;</span>],</span><br><span class="line">    license_kinds: [</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-Apache-2.0&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-BSD&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-GPL&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-GPL-2.0&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-LGPL&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-MIT&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-OpenSSL&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-Unicode-DFS&quot;</span>,</span><br><span class="line">        <span class="string">&quot;SPDX-license-identifier-W3C&quot;</span>,</span><br><span class="line">        <span class="string">&quot;legacy_unencumbered&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    license_text: [</span><br><span class="line">        <span class="string">&quot;LICENSE&quot;</span>,</span><br><span class="line">        <span class="string">&quot;NOTICE&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">build = [</span><br><span class="line">    <span class="string">&quot;JavaLibrary.bp&quot;</span>,</span><br><span class="line">    <span class="comment">// 这里有两个编译脚本</span></span><br><span class="line">    <span class="string">&quot;NativeCode.bp&quot;</span>,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">genrule &#123;</span><br><span class="line">    name: <span class="string">&quot;notices-for-framework-stubs-gen&quot;</span>,</span><br><span class="line">    tool_files: [</span><br><span class="line">        <span class="string">&quot;NOTICE&quot;</span>,</span><br><span class="line">        <span class="string">&quot;ojluni/NOTICE&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    cmd: <span class="string">&quot;cp -f $(location NOTICE) $(genDir)/NOTICES/libcore-NOTICE &amp;&amp; cp -f $(location ojluni/NOTICE) $(genDir)/NOTICES/ojluni-NOTICE&quot;</span>,</span><br><span class="line">    out: [</span><br><span class="line">        <span class="string">&quot;NOTICES/libcore-NOTICE&quot;</span>,</span><br><span class="line">        <span class="string">&quot;NOTICES/ojluni-NOTICE&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">java_library &#123;</span><br><span class="line">    name: <span class="string">&quot;art-notices-for-framework-stubs-jar&quot;</span>,</span><br><span class="line">    visibility: [</span><br><span class="line">        <span class="string">&quot;//art/build/sdk&quot;</span>,</span><br><span class="line">        <span class="string">&quot;//frameworks/base&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    java_resources: [</span><br><span class="line">        <span class="string">&quot;:notices-for-framework-stubs-gen&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    sdk_version: <span class="string">&quot;core_current&quot;</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+查看 <code>NativeCode.bp</code><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">cc_library_shared &#123;</span><br><span class="line">    name: <span class="string">&quot;libjavacore&quot;</span>,</span><br><span class="line">    visibility: [</span><br><span class="line">        <span class="string">&quot;//art/build/apex&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    apex_available: [</span><br><span class="line">        <span class="string">&quot;com.android.art&quot;</span>,</span><br><span class="line">        <span class="string">&quot;com.android.art.debug&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    defaults: [</span><br><span class="line">        <span class="string">&quot;core_native_default_flags&quot;</span>,</span><br><span class="line">        <span class="string">&quot;core_native_default_libs&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    srcs: [</span><br><span class="line">        <span class="string">&quot;:luni_native_srcs&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    shared_libs: [</span><br><span class="line">        <span class="string">&quot;libandroidio&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libbase&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libcrypto&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libicu&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libexpat&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libnativehelper&quot;</span>,</span><br><span class="line">        <span class="string">&quot;libz&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">    static_libs: [</span><br><span class="line">        <span class="string">&quot;libziparchive&quot;</span>,</span><br><span class="line">    ],</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+最终找到该名称为 <code>libjavacore.so</code></li>
+</ul>
+<ol start="2">
+<li><p>根据代码位置猜测，或者直接在 <code>maps</code> 文件里面查找哪些已经加载的可疑的库，目前查找到系统有关的库包含如下几个</p>
+<ul>
+<li><code>libjavacore.so</code> 与文件重定向、文件状态、exec执行有关</li>
+<li><code>libnativehelper.so</code> 与动态加载有关</li>
+<li><code>libnativeloader.so</code> Android 7以上动态加载有关</li>
+<li><code>libart.so</code> 与文件重定向、动态加载有关</li>
+<li><code>libopenjdk.so</code> 与文件重定向、文件状态有关</li>
+<li><code>libopenjdkjvm.so</code> 与文件访问有关</li>
+<li><code>libandroid_runtime.so</code> 与文件访问有关</li>
+<li><code>libcutils.so</code> 与SystemProperties访问有关</li>
+</ul>
+</li>
+<li><p>如果有遗漏的库可以调用 <code>NativeHook.relinkLibrary()</code> 重新重定位该库</p>
+</li>
+</ol>
+<h2 id="其它模块调用"><a href="#其它模块调用" class="headerlink" title="其它模块调用"></a>其它模块调用</h2><p>查看 <a href="https://github.com/sanfengAndroid/FakeXposed">FakeXposed</a> 说明文档</p>
+<h2 id="软件使用截图"><a href="#软件使用截图" class="headerlink" title="软件使用截图"></a>软件使用截图</h2><ul>
+<li>软件状态 <img data-src="https://github.com/sanfengAndroid/FakeXposed/capture/cn/home.png" alt="home"></li>
+<li>应用配置，长按开启/关闭 <img data-src="https://github.com/sanfengAndroid/FakeXposed/capture/cn/package_configuration.png" alt="package_configuration"></li>
+<li>对应功能配置 <img data-src="https://github.com/sanfengAndroid/FakeXposed/capture/cn/package_hidden.png" alt="package_hidden"> <img data-src="https://github.com/sanfengAndroid/FakeXposed/capture/cn/dlsym_hidden.png" alt="dlsym_hidden"></li>
+</ul>
+<h3 id="注意：Native-Hook-可能会存在兼容性问题，在Hook系统进程时请做好备份"><a href="#注意：Native-Hook-可能会存在兼容性问题，在Hook系统进程时请做好备份" class="headerlink" title="注意：Native Hook 可能会存在兼容性问题，在Hook系统进程时请做好备份"></a><strong>注意：Native Hook 可能会存在兼容性问题，在Hook系统进程时请做好备份</strong></h3><h3 id="软件没有经过大量测试，有问题的可以到github反馈、文章留言、公众号留言均可"><a href="#软件没有经过大量测试，有问题的可以到github反馈、文章留言、公众号留言均可" class="headerlink" title="软件没有经过大量测试，有问题的可以到github反馈、文章留言、公众号留言均可"></a><strong>软件没有经过大量测试，有问题的可以到github反馈、文章留言、公众号留言均可</strong></h3>
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div>坚持原创技术分享，感谢您的支持与鼓励！</div>
+
+  <div id="qr" style="display: block;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/wechatpay.png" alt="sanfengAndroid 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/alipay.png" alt="sanfengAndroid 支付宝">
+        <p>支付宝</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/paypal.png" alt="sanfengAndroid PayPal">
+        <p>PayPal</p>
+      </div>
+
+  </div>
+</div>
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>sanfengAndroid
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/" title="FakeXposed原理分析">https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+        
+
+  <div class="followme">
+    <p>欢迎关注我的其它渠道，第一时间获取最新消息</p>
+
+    <div class="social-list">
+
+        <div class="social-item">
+		  <img src="/images/wechat_channel.png"/>
+        </div>
+    </div>
+  </div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android-Hook/" rel="tag"># Android Hook</a>
+              <a href="/tags/PLT-Hook/" rel="tag"># PLT Hook</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/01/10/modify-linker-to-implement-plt-hook/" rel="prev" title="Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook">
+      <i class="fa fa-chevron-left"></i> Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#FakeXposed"><span class="nav-number">1.</span> <span class="nav-text">FakeXposed</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E7%90%86%E7%AE%80%E8%A6%81%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">原理简要介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B1%BB-%E5%A0%86%E6%A0%88%E7%B1%BB%E9%9A%90%E8%97%8F"><span class="nav-number">3.</span> <span class="nav-text">类&#x2F;堆栈类隐藏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%94%E7%94%A8-%E7%BB%84%E4%BB%B6%E9%9A%90%E8%97%8F"><span class="nav-number">4.</span> <span class="nav-text">应用&#x2F;组件隐藏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E4%BF%AE%E6%94%B9"><span class="nav-number">5.</span> <span class="nav-text">环境变量修改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%A8%E5%B1%80%E5%B1%9E%E6%80%A7SystemProperties%E4%BF%AE%E6%94%B9"><span class="nav-number">6.</span> <span class="nav-text">全局属性SystemProperties修改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Android-Global%E5%B1%9E%E6%80%A7%E4%BF%AE%E6%94%B9"><span class="nav-number">7.</span> <span class="nav-text">Android Global属性修改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Runtime-exec%E6%8B%A6%E6%88%AA"><span class="nav-number">8.</span> <span class="nav-text">Runtime.exec拦截</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E9%87%8D%E5%AE%9A%E5%90%91-%E8%AE%BF%E9%97%AE%E6%8E%A7%E5%88%B6%EF%BC%88%E6%A0%B8%E5%BF%83%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">文件重定向&#x2F;访问控制（核心）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%A6%E5%8F%B7%E9%9A%90%E8%97%8F"><span class="nav-number">10.</span> <span class="nav-text">符号隐藏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E5%85%B1%E4%BA%AB%E5%BA%93%E6%9F%A5%E6%89%BE"><span class="nav-number">11.</span> <span class="nav-text">系统共享库查找</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E5%AE%83%E6%A8%A1%E5%9D%97%E8%B0%83%E7%94%A8"><span class="nav-number">12.</span> <span class="nav-text">其它模块调用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E4%BD%BF%E7%94%A8%E6%88%AA%E5%9B%BE"><span class="nav-number">13.</span> <span class="nav-text">软件使用截图</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%EF%BC%9ANative-Hook-%E5%8F%AF%E8%83%BD%E4%BC%9A%E5%AD%98%E5%9C%A8%E5%85%BC%E5%AE%B9%E6%80%A7%E9%97%AE%E9%A2%98%EF%BC%8C%E5%9C%A8Hook%E7%B3%BB%E7%BB%9F%E8%BF%9B%E7%A8%8B%E6%97%B6%E8%AF%B7%E5%81%9A%E5%A5%BD%E5%A4%87%E4%BB%BD"><span class="nav-number">13.1.</span> <span class="nav-text">注意：Native Hook 可能会存在兼容性问题，在Hook系统进程时请做好备份</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E6%B2%A1%E6%9C%89%E7%BB%8F%E8%BF%87%E5%A4%A7%E9%87%8F%E6%B5%8B%E8%AF%95%EF%BC%8C%E6%9C%89%E9%97%AE%E9%A2%98%E7%9A%84%E5%8F%AF%E4%BB%A5%E5%88%B0github%E5%8F%8D%E9%A6%88%E3%80%81%E6%96%87%E7%AB%A0%E7%95%99%E8%A8%80%E3%80%81%E5%85%AC%E4%BC%97%E5%8F%B7%E7%95%99%E8%A8%80%E5%9D%87%E5%8F%AF"><span class="nav-number">13.2.</span> <span class="nav-text">软件没有经过大量测试，有问题的可以到github反馈、文章留言、公众号留言均可</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">sanfengAndroid</p>
+  <div class="site-description" itemprop="description">sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/sanfengAndroid" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;sanfengAndroid"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">sanfengAndroid</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+    <span title="站点总字数">69k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">1:03</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/pjax/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '27af11439664ab196f5c',
+      clientSecret: '6dcc8edabf6df057e7c16352ba0847452f546bb2',
+      repo        : 'pages-comment',
+      owner       : 'sanfengAndroid',
+      admin       : ['sanfengAndroid'],
+      id          : '8df3f9fc4cb56d2c61163f9aa0f77596',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+    </div>
+</body>
+</html>

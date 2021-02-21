@@ -178,6 +178,101 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="sanfengAndroid">
+      <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="sanfengAndroid逆向安全">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/02/20/fakexposed-principle-analyze/" class="post-title-link" itemprop="url">FakeXposed原理分析</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-20 16:39:31" itemprop="dateCreated datePublished" datetime="2021-02-20T16:39:31+08:00">2021-02-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-21 21:53:52" itemprop="dateModified" datetime="2021-02-21T21:53:52+08:00">2021-02-21</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>22k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>20 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="FakeXposed"><a href="#FakeXposed" class="headerlink" title="FakeXposed"></a><a href="https://github.com/sanfengAndroid/FakeXposed">FakeXposed</a></h2><p>一个通用多功能的 <code>Xposed</code> 隐藏器，采用 <code>Native</code> 与 <code>Java</code> 结合来做到双向屏蔽检测，提供高度自由化为每个应用配置不同属性。它不仅仅局限于屏蔽 <code>Xposed</code> 检测，还提供更多更加高级的功能，如 <code>maps</code> 文件自定义屏蔽各种检测、完整的文件重定向功能、访问权限控制、<code>JNI</code> 方法监控、动态符号查找屏蔽 <code>dlsym</code> 等等，还可以提供给其它模块在进程内动态添加或修改配置。开源地址 <a href="https://github.com/sanfengAndroid/FakeXposed">https://github.com/sanfengAndroid/FakeXposed</a></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/02/20/fakexposed-principle-analyze/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -217,11 +312,11 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
+                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
                 </span>
                   ，
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
+                  <a href="/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
                 </span>
             </span>
 
@@ -339,7 +434,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -396,12 +491,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-area-chart"></i>
     </span>
-    <span title="站点总字数">48k</span>
+    <span title="站点总字数">69k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">43 分钟</span>
+    <span title="站点阅读时长">1:03</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
