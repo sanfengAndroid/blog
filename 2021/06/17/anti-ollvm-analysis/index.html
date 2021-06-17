@@ -23,31 +23,42 @@
     var CONFIG = {"hostname":"github.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":true,"nav":{"gitalk":{"order":-2}},"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
-<meta property="og:type" content="website">
-<meta property="og:title" content="sanfengAndroid逆向安全">
-<meta property="og:url" content="https://github.com/sanfengAndroid/">
+  <meta name="description" content="AntiOllvm去除二进制文件 Ollvm 混淆，并生成新的可执行二进制文件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AntiOllvm去除二进制代码Ollvm混淆并回编译">
+<meta property="og:url" content="https://github.com/sanfengAndroid/2021/06/17/anti-ollvm-analysis/">
 <meta property="og:site_name" content="sanfengAndroid逆向安全">
-<meta property="og:description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
+<meta property="og:description" content="AntiOllvm去除二进制文件 Ollvm 混淆，并生成新的可执行二进制文件">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/test-md5-video.gif">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_obf.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_obf.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_unobf.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_antiobf.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_unobf.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_antiobf.png">
+<meta property="article:published_time" content="2021-06-16T16:39:30.000Z">
+<meta property="article:modified_time" content="2021-06-17T01:33:36.228Z">
 <meta property="article:author" content="sanfengAndroid">
-<meta property="article:tag" content="Android安全,Android逆向,Android源码">
+<meta property="article:tag" content="LLVM">
+<meta property="article:tag" content="Obfuscator">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/test-md5-video.gif">
 
-<link rel="canonical" href="https://github.com/sanfengAndroid/">
+<link rel="canonical" href="https://github.com/sanfengAndroid/2021/06/17/anti-ollvm-analysis/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>sanfengAndroid逆向安全</title>
+  <title>AntiOllvm去除二进制代码Ollvm混淆并回编译 | sanfengAndroid逆向安全</title>
   
 
 
@@ -172,9 +183,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -190,10 +202,9 @@
       <meta itemprop="name" content="sanfengAndroid逆向安全">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/06/17/anti-ollvm-analysis/" class="post-title-link" itemprop="url">AntiOllvm去除二进制代码Ollvm混淆并回编译</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          AntiOllvm去除二进制代码Ollvm混淆并回编译
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -240,329 +251,186 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="AntiOllvm"><a href="#AntiOllvm" class="headerlink" title="AntiOllvm"></a><a href="https://github.com/sanfengAndroid/AntiOllvm">AntiOllvm</a></h2><p>去除二进制文件 <code>Ollvm</code> 混淆，并生成新的可执行二进制文件</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/06/17/anti-ollvm-analysis/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
+        <h2 id="AntiOllvm"><a href="#AntiOllvm" class="headerlink" title="AntiOllvm"></a><a href="https://github.com/sanfengAndroid/AntiOllvm">AntiOllvm</a></h2><p>去除二进制文件 <code>Ollvm</code> 混淆，并生成新的可执行二进制文件</p>
+<a id="more"></a>
+
+<h2 id="其它方法介绍"><a href="#其它方法介绍" class="headerlink" title="其它方法介绍"></a>其它方法介绍</h2><ul>
+<li>Ollvm 已经开源很久了，现在市面很多恶意软件都使用它，为了防止分析加壳加混淆基本是必备的。假如一个恶意软件使用某种算法加密了你的文件，并且采用了混淆，如果你要自己解密或者制作解密工具都离不开分析它的算法。而使用混淆后伪代码几乎不可查看，为此你要付出大量的时间和精力去分析。现在网上通用一点的方法有使用 <code>unicorn</code> 模拟执行，还有使用 <code>trace</code> 功能跟踪运行过的代码。</li>
+<li>使用 <code>unicorn</code> 模拟执行<ul>
+<li>虽然可以支持很多架构的运行，但是从汇编层构建出 <code>CFG</code> 还是比较吃力的</li>
+<li>具体的分析都对应着直接的汇编指令，再加上多架构这样处理起来非常麻烦</li>
+<li>还有修复跳转，补丁指令，在原函数中代码分散，甚至还需要修复指令的重定位</li>
+</ul>
+</li>
+<li>使用 <code>trace</code> 跟踪<ul>
+<li><code>trace</code> 分析相对较简单,但缺点是你需要在真机上运行</li>
+<li>每次运行也不一定会覆盖所有路径</li>
+<li>在还原算法或分析时看的是汇编指令，增加分析难度</li>
+</ul>
+</li>
+</ul>
+<h2 id="AntiOllvm-简介"><a href="#AntiOllvm-简介" class="headerlink" title="AntiOllvm 简介"></a>AntiOllvm 简介</h2><ul>
+<li>采用将二进制代码还原为 <code>LLVM IR</code> 的方式，经过各种优化去除混淆后再编译回原文件</li>
+<li>采用这种方案优点很多<ul>
+<li>本身 <code>Ollvm</code> 就是在 <code>LLVM IR</code> 中转换代码然后编译，在还原回 <code>LLVM IR</code> 后能最大限度的还原特征</li>
+<li>可以利用现有的 <code>LLVM</code> 中的优化，各种分析也可以查找部分现成的</li>
+<li>统一了所有架构的分析，分析方法通用，重建 CFG 非常容易</li>
+<li>分析过程更加直观，不接触汇编代码，更容易分析出混淆规则</li>
+</ul>
+</li>
+</ul>
+<h2 id="大概思路"><a href="#大概思路" class="headerlink" title="大概思路"></a>大概思路</h2><ul>
+<li><code>AntiOllvm</code> 使用 <a href="https://github.com/avast/retdec">retdec</a> 将二进制文件还原为 <code>LLVM IR</code></li>
+<li>使用 <code>LLVM</code> 中的内部优化，将 <code>IR</code> 码优化为较高可读性的代码，这期间部分指令替换以及不可达代码就已经优化掉了</li>
+<li>定制 <code>Pass</code> 去除掉函数内部的 虚假控制流和平坦化</li>
+<li>最后通过 <code>LLVM</code> 将代码重新编译回汇编并回填文件</li>
+</ul>
+<h2 id="开发进度"><a href="#开发进度" class="headerlink" title="开发进度"></a>开发进度</h2><table>
+<thead>
+<tr>
+<th align="center">架构</th>
+<th align="center">ELF</th>
+<th align="center">COFF</th>
+<th align="center">Mach-O</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Arm</td>
+<td align="center">Yes</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">Arm64</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">X86</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">X86_64</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<ul>
+<li>等测试稳定会后陆续开放其它架构</li>
+<li>IDA 插件的开发（需等所有架构开放后）</li>
+</ul>
+<h2 id="使用说明"><a href="#使用说明" class="headerlink" title="使用说明"></a>使用说明</h2><ul>
+<li>该项目是收费项目，<a href="https://github.com/sanfengAndroid/AntiOllvm">AntiOllvm</a>仓库只会存放说明文件和一些测试样本的源码和二进制文件</li>
+<li>目前还未提供可购买版本，鉴于目前不够稳定，样本量较少，后续稳定后会推出正式可购买版本</li>
+<li>欢迎大家提供样本（越复杂越好）到我的邮箱 <a target="_blank" rel="noopener" href="https://mail.163.com/">beichenzhizuoshi@163.com</a>，也可在本仓库提交 <strong>issues</strong> 附带样本及说明，目前只接受 <code>Arm</code> 架构的 <code>ELF</code> 样本，发送样本时请在标题上注明 <strong>二进制架构及文件格式</strong> 例如 <strong>Arm-ELF 测试样本</strong>, 内容上注明被混淆的 <strong>函数名称或地址</strong>，和你自认为的 <strong>混淆难度等级（1-3）</strong>，我会在去混淆通过后回复你去混淆后的二进制文件</li>
+</ul>
+<h2 id="例子演示"><a href="#例子演示" class="headerlink" title="例子演示"></a>例子演示</h2><ul>
+<li>见 <a href="https://github.com/sanfengAndroid/AntiOllvm">AntiOllvm</a>，在这个仓库会公布文档和一些测试的源码以及去混淆后的二进制文件</li>
+<li>该样本是使用 <code>openssl</code> 加密库，开启混淆，注意测试与 <code>MD5</code> 算法有关方法 <code>MD5_Update</code>、<code>md5_block_data_order</code>，样本详细说明可以查看仓库 <a href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/OpenSSLTest/doc/README_CN.md">OpenSSLTest</a></li>
+<li>未混淆和去混淆后的运行对比<br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/test-md5-video.gif" alt="gif"></li>
+<li>混淆过后的 <code>MD5_Update</code> <code>CFG</code><br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_obf.png" alt="MD5_Update Obf CFG"></li>
+<li>混淆过后的 <code>md5_block_data_order</code> <code>CFG</code><br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_obf.png" alt="md5_block_data_order Obf CFG"></li>
+<li>未混淆 <code>MD5_Update</code> <code>CFG</code> 如下:<br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_unobf.png" alt="MD5_Update CFG"></li>
+<li>去混淆后 <code>MD5_Update</code> <code>CFG</code><br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/MD5_Update_cfg_antiobf.png" alt="MD5_Update AntiObf  CFG"></li>
+<li>未混淆 <code>md5_block_data_order</code> <code>CFG</code><br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_unobf.png" alt="md5_block_data_order CFG"></li>
+<li>去混淆后 <code>md5_block_data_order</code> <code>CFG</code><br><img data-src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/OpenSSLTest/doc/img/md5_block_data_order_cfg_antiobf.png" alt="CFG"></li>
+</ul>
+<h2 id="问题交流"><a href="#问题交流" class="headerlink" title="问题交流"></a>问题交流</h2><ul>
+<li>请关注下方微信公众号后获取入群提示</li>
+</ul>
+
     </div>
 
     
     
     
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+        <div class="reward-container">
+  <div>坚持原创技术分享，感谢您的支持与鼓励！</div>
 
+  <div id="qr" style="display: block;">
       
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/02/28/simple-java-native-hook/">
+      <div style="display: inline-block;">
+        <img src="/images/wechatpay.png" alt="sanfengAndroid 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/alipay.png" alt="sanfengAndroid 支付宝">
+        <p>支付宝</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/paypal.png" alt="sanfengAndroid PayPal">
+        <p>PayPal</p>
+      </div>
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="sanfengAndroid">
-      <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
-    </span>
+  </div>
+</div>
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="sanfengAndroid逆向安全">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/28/simple-java-native-hook/" class="post-title-link" itemprop="url">一种通用超简单的Android Java Native方法Hook</a>
-        </h2>
+        
 
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>sanfengAndroid
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://github.com/sanfengAndroid/2021/06/17/anti-ollvm-analysis/" title="AntiOllvm去除二进制代码Ollvm混淆并回编译">https://github.com/sanfengAndroid/2021/06/17/anti-ollvm-analysis/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
 
-              <time title="创建时间：2021-02-28 19:11:13" itemprop="dateCreated datePublished" datetime="2021-02-28T19:11:13+08:00">2021-02-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-03-02 12:18:16" itemprop="dateModified" datetime="2021-03-02T12:18:16+08:00">2021-03-02</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
-                </span>
-            </span>
+        
 
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>13k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>12 分钟</span>
-            </span>
+  <div class="followme">
+    <p>欢迎关注我的公众号，第一时间收到原创分享</p>
 
+    <div class="social-list">
+
+        <div class="social-item">
+		  <img src="/images/wechat_channel.png"/>
         </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>目前 <code>Android</code> 上 <code>Hook</code> 的框架已经很多了，但是支持 <code>Java Native</code> 方法的 <code>Hook</code> 却很少，这些框架将 <code>native</code> 方法当普通方法 <code>Hook</code>，适配不同架构复杂等等。本文介绍一种 <code>Android</code> 版本通用的 <code>Java Native Hook</code> 方法并实现代码很少，下面进入我们的分析。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/02/28/simple-java-native-hook/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
     </div>
+  </div>
 
-    
-    
-    
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
+          <div class="post-tags">
+              <a href="/tags/LLVM/" rel="tag"># LLVM</a>
+              <a href="/tags/Obfuscator/" rel="tag"># Obfuscator</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/28/simple-java-native-hook/" rel="prev" title="一种通用超简单的Android Java Native方法Hook">
+      <i class="fa fa-chevron-left"></i> 一种通用超简单的Android Java Native方法Hook
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
       </footer>
+    
   </article>
   
   
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/02/20/fakexposed-principle-analyze/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="sanfengAndroid">
-      <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="sanfengAndroid逆向安全">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/20/fakexposed-principle-analyze/" class="post-title-link" itemprop="url">FakeXposed原理分析</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-02-20 16:39:31" itemprop="dateCreated datePublished" datetime="2021-02-20T16:39:31+08:00">2021-02-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-02-22 10:16:22" itemprop="dateModified" datetime="2021-02-22T10:16:22+08:00">2021-02-22</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>22k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>20 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="FakeXposed"><a href="#FakeXposed" class="headerlink" title="FakeXposed"></a><a href="https://github.com/sanfengAndroid/FakeXposed">FakeXposed</a></h2><p>一个通用多功能的 <code>Xposed</code> 隐藏器，采用 <code>Native</code> 与 <code>Java</code> 结合来做到双向屏蔽检测，提供高度自由化为每个应用配置不同属性。它不仅仅局限于屏蔽 <code>Xposed</code> 检测，还提供更多更加高级的功能，如 <code>maps</code> 文件自定义屏蔽各种检测、完整的文件重定向功能、访问权限控制、<code>JNI</code> 方法监控、动态符号查找屏蔽 <code>dlsym</code> 等等，还可以提供给其它模块在进程内动态添加或修改配置。开源地址 <a href="https://github.com/sanfengAndroid/FakeXposed">https://github.com/sanfengAndroid/FakeXposed</a></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/02/20/fakexposed-principle-analyze/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="sanfengAndroid">
-      <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="sanfengAndroid逆向安全">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/01/10/modify-linker-to-implement-plt-hook/" class="post-title-link" itemprop="url">Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-01-10 20:37:48" itemprop="dateCreated datePublished" datetime="2021-01-10T20:37:48+08:00">2021-01-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-01-18 11:36:49" itemprop="dateModified" datetime="2021-01-18T11:36:49+08:00">2021-01-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>48k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>43 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们知道linux系统中存在 <code>LD_PRELOAD</code> 环境变量更改库的链接顺序，影响库的导入函数重定位，而Android使用linux是内核也包含 <code>LD_PRELOAD</code>环境变量，具体使用路径在 <a target="_blank" rel="noopener" href="https://cs.android.com/android/platform/superproject/+/master:bionic/linker/linker_main.cpp;l=352">linker_main.cpp</a> 中(本文分析源码如未特别提及则都基于最新主分支)。在执行<code>linker</code>初始化时访问了该环境变量，后续优先加载将其作为全局库从而影响之后该进程加载的所有库的符号链接，因此后续我们将围绕该环境变量展开</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/01/10/modify-linker-to-implement-plt-hook/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-
   
 
 
 
           </div>
           
+    <div class="comments" id="gitalk-container"></div>
 
 <script>
   window.addEventListener('tabs:register', () => {
@@ -609,6 +477,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#AntiOllvm"><span class="nav-number">1.</span> <span class="nav-text">AntiOllvm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E5%AE%83%E6%96%B9%E6%B3%95%E4%BB%8B%E7%BB%8D"><span class="nav-number">2.</span> <span class="nav-text">其它方法介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AntiOllvm-%E7%AE%80%E4%BB%8B"><span class="nav-number">3.</span> <span class="nav-text">AntiOllvm 简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%A7%E6%A6%82%E6%80%9D%E8%B7%AF"><span class="nav-number">4.</span> <span class="nav-text">大概思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%80%E5%8F%91%E8%BF%9B%E5%BA%A6"><span class="nav-number">5.</span> <span class="nav-text">开发进度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E"><span class="nav-number">6.</span> <span class="nav-text">使用说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BE%8B%E5%AD%90%E6%BC%94%E7%A4%BA"><span class="nav-number">7.</span> <span class="nav-text">例子演示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E4%BA%A4%E6%B5%81"><span class="nav-number">8.</span> <span class="nav-text">问题交流</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -813,6 +682,25 @@ window.addEventListener('pjax:success', () => {
 
   
 
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '27af11439664ab196f5c',
+      clientSecret: '6dcc8edabf6df057e7c16352ba0847452f546bb2',
+      repo        : 'pages-comment',
+      owner       : 'sanfengAndroid',
+      admin       : ['sanfengAndroid'],
+      id          : '911a6db05664c61ceee61448c3621cfb',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
 
     </div>
 </body>
