@@ -5,40 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
 <meta name="generator" content="Hexo 5.3.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
-  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/blog/images/logo.svg" color="#222">
 
-<link rel="stylesheet" href="/css/main.css">
+<link rel="stylesheet" href="/blog/css/main.css">
 
 
-<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="/blog/lib/font-awesome/css/font-awesome.min.css">
   <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
-  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
-  <script src="/lib/pace/pace.min.js"></script>
+  <link rel="stylesheet" href="/blog/lib/pace/pace-theme-minimal.min.css">
+  <script src="/blog/lib/pace/pace.min.js"></script>
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"github.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":true,"nav":{"gitalk":{"order":-2}},"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+    var CONFIG = {"hostname":"sanfengandroid.github.io","root":"/blog/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":true,"nav":{"gitalk":{"order":-2}},"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
   <meta name="description" content="前言我们知道linux系统中存在 LD_PRELOAD 环境变量更改库的链接顺序，影响库的导入函数重定位，而Android使用linux是内核也包含 LD_PRELOAD环境变量，具体使用路径在 linker_main.cpp 中(本文分析源码如未特别提及则都基于最新主分支)。在执行linker初始化时访问了该环境变量，后续优先加载将其作为全局库从而影响之后该进程加载的所有库的符号链接，因此后续我">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook">
-<meta property="og:url" content="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/">
+<meta property="og:url" content="https://sanfengandroid.github.io/blog/2021/01/10/modify-linker-to-implement-plt-hook/">
 <meta property="og:site_name" content="sanfengAndroid逆向安全">
 <meta property="og:description" content="前言我们知道linux系统中存在 LD_PRELOAD 环境变量更改库的链接顺序，影响库的导入函数重定位，而Android使用linux是内核也包含 LD_PRELOAD环境变量，具体使用路径在 linker_main.cpp 中(本文分析源码如未特别提及则都基于最新主分支)。在执行linker初始化时访问了该环境变量，后续优先加载将其作为全局库从而影响之后该进程加载的所有库的符号链接，因此后续我">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-01-10T12:37:48.000Z">
 <meta property="article:modified_time" content="2021-01-18T03:36:49.699Z">
 <meta property="article:author" content="sanfengAndroid">
+<meta property="article:tag" content="Android源码">
 <meta property="article:tag" content="Android Hook">
 <meta property="article:tag" content="PLT Hook">
-<meta property="article:tag" content="Android源码">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/">
+<link rel="canonical" href="https://sanfengandroid.github.io/blog/2021/01/10/modify-linker-to-implement-plt-hook/">
 
 
 <script id="page-configurations">
@@ -109,7 +109,7 @@
 
   <div class="site-meta">
 
-    <a href="/" class="brand" rel="start">
+    <a href="/blog/" class="brand" rel="start">
       <span class="logo-line-before"><i></i></span>
       <h1 class="site-title">sanfengAndroid逆向安全</h1>
       <span class="logo-line-after"><i></i></span>
@@ -130,27 +130,27 @@
   <ul id="menu" class="menu">
         <li class="menu-item menu-item-home">
 
-    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+    <a href="/blog/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
 
   </li>
         <li class="menu-item menu-item-about">
 
-    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+    <a href="/blog/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
 
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+    <a href="/blog/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+    <a href="/blog/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+    <a href="/blog/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
 
   </li>
   </ul>
@@ -168,7 +168,7 @@
     <span>0%</span>
   </div>
 
-  <a href="https://github.com/sanfengAndroid" class="github-corner" title="关注我的GitHub" aria-label="关注我的GitHub"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+  <a href="https://github.com/sanfengAndroid" class="github-corner" title="关注我的GitHub" aria-label="关注我的GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
 
 
     <main class="main">
@@ -183,10 +183,10 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/">
+    <link itemprop="mainEntityOfPage" href="https://sanfengandroid.github.io/blog/2021/01/10/modify-linker-to-implement-plt-hook/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
       <meta itemprop="name" content="sanfengAndroid">
       <meta itemprop="description" content="sanfengAndroid专注于移动安全逆向,源码分析,分享相关技术文章">
     </span>
@@ -221,11 +221,11 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
+                  <a href="/blog/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
                 </span>
                   ，
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Android%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Android源码</span></a>
+                  <a href="/blog/categories/Android-Hook/" itemprop="url" rel="index"><span itemprop="name">Android Hook</span></a>
                 </span>
             </span>
 
@@ -343,12 +343,12 @@
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">android_namespace_t</span>* <span class="title">create_namespace</span><span class="params">(<span class="keyword">const</span> <span class="keyword">void</span>* caller_addr,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">const</span> <span class="keyword">char</span>* name,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">const</span> <span class="keyword">char</span>* ld_library_path,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">const</span> <span class="keyword">char</span>* default_library_path,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">uint64_t</span> type,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">const</span> <span class="keyword">char</span>* permitted_when_isolated_path,</span></span></span><br><span class="line"><span class="function"><span class="params">                                      <span class="keyword">android_namespace_t</span>* parent_namespace)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 创建命名空间肯定会有一个父命名空间                                       </span></span><br><span class="line">  <span class="keyword">if</span> (parent_namespace == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    <span class="comment">// if parent_namespace is nullptr -&gt; set it to the caller namespace</span></span><br><span class="line">    soinfo* caller_soinfo = find_containing_library(caller_addr);</span><br><span class="line"></span><br><span class="line">    parent_namespace = caller_soinfo != <span class="literal">nullptr</span> ?</span><br><span class="line">                       caller_soinfo-&gt;get_primary_namespace() :</span><br><span class="line">                       g_anonymous_namespace;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ProtectedDataGuard guard;</span><br><span class="line">  <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">string</span>&gt; ld_library_paths;</span><br><span class="line">  <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">string</span>&gt; default_library_paths;</span><br><span class="line">  <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::<span class="built_in">string</span>&gt; permitted_paths;</span><br><span class="line"></span><br><span class="line">  parse_path(ld_library_path, <span class="string">&quot;:&quot;</span>, &amp;ld_library_paths);</span><br><span class="line">  parse_path(default_library_path, <span class="string">&quot;:&quot;</span>, &amp;default_library_paths);</span><br><span class="line">  parse_path(permitted_when_isolated_path, <span class="string">&quot;:&quot;</span>, &amp;permitted_paths);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">android_namespace_t</span>* ns = <span class="keyword">new</span> (g_namespace_allocator.alloc()) <span class="keyword">android_namespace_t</span>();</span><br><span class="line">  ns-&gt;set_name(name);</span><br><span class="line">  ns-&gt;set_isolated((type &amp; ANDROID_NAMESPACE_TYPE_ISOLATED) != <span class="number">0</span>);</span><br><span class="line">  ns-&gt;set_greylist_enabled((type &amp; ANDROID_NAMESPACE_TYPE_GREYLIST_ENABLED) != <span class="number">0</span>);</span><br><span class="line">  ns-&gt;set_also_used_as_anonymous((type &amp; ANDROID_NAMESPACE_TYPE_ALSO_USED_AS_ANONYMOUS) != <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Android Java加载库会附带ANDROID_NAMESPACE_TYPE_SHARED标志</span></span><br><span class="line">  <span class="keyword">if</span> ((type &amp; ANDROID_NAMESPACE_TYPE_SHARED) != <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// append parent namespace paths.</span></span><br><span class="line">    <span class="comment">// 复制父命名空间的库加载路径，以及允许的路径</span></span><br><span class="line">    <span class="built_in">std</span>::copy(parent_namespace-&gt;get_ld_library_paths().begin(),</span><br><span class="line">              parent_namespace-&gt;get_ld_library_paths().end(),</span><br><span class="line">              back_inserter(ld_library_paths));</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::copy(parent_namespace-&gt;get_default_library_paths().begin(),</span><br><span class="line">              parent_namespace-&gt;get_default_library_paths().end(),</span><br><span class="line">              back_inserter(default_library_paths));</span><br><span class="line"></span><br><span class="line">    <span class="built_in">std</span>::copy(parent_namespace-&gt;get_permitted_paths().begin(),</span><br><span class="line">              parent_namespace-&gt;get_permitted_paths().end(),</span><br><span class="line">              back_inserter(permitted_paths));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If shared - clone the parent namespace</span></span><br><span class="line">    <span class="comment">// Java调用完全继承所有soinfo</span></span><br><span class="line">    add_soinfos_to_namespace(parent_namespace-&gt;soinfo_list(), ns);</span><br><span class="line">    <span class="comment">// and copy parent namespace links</span></span><br><span class="line">    <span class="comment">// 同时继承链接命名空间</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span>&amp; link : parent_namespace-&gt;linked_namespaces()) &#123;</span><br><span class="line">      ns-&gt;add_linked_namespace(link.linked_namespace(), link.shared_lib_sonames(),</span><br><span class="line">                               link.allow_all_shared_libs());</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// If not shared - copy only the shared group</span></span><br><span class="line">    <span class="comment">// 非Java调用只复制共享的库</span></span><br><span class="line">    add_soinfos_to_namespace(parent_namespace-&gt;get_shared_group(), ns);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ns-&gt;set_ld_library_paths(<span class="built_in">std</span>::move(ld_library_paths));</span><br><span class="line">  ns-&gt;set_default_library_paths(<span class="built_in">std</span>::move(default_library_paths));</span><br><span class="line">  ns-&gt;set_permitted_paths(<span class="built_in">std</span>::move(permitted_paths));</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (ns-&gt;is_also_used_as_anonymous() &amp;&amp; !set_anonymous_namespace(ns)) &#123;</span><br><span class="line">    DL_ERR(<span class="string">&quot;failed to set namespace: [name=\&quot;%s\&quot;, ld_library_path=\&quot;%s\&quot;, default_library_paths=\&quot;%s\&quot;&quot;</span></span><br><span class="line">           <span class="string">&quot; permitted_paths=\&quot;%s\&quot;] as the anonymous namespace&quot;</span>,</span><br><span class="line">           ns-&gt;get_name(),</span><br><span class="line">           android::base::Join(ns-&gt;get_ld_library_paths(), <span class="string">&#x27;:&#x27;</span>).c_str(),</span><br><span class="line">           android::base::Join(ns-&gt;get_default_library_paths(), <span class="string">&#x27;:&#x27;</span>).c_str(),</span><br><span class="line">           android::base::Join(ns-&gt;get_permitted_paths(), <span class="string">&#x27;:&#x27;</span>).c_str());</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nullptr</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> ns;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">soinfo_list_t</span> <span class="title">android_namespace_t::get_shared_group</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (<span class="keyword">this</span> == &amp;g_default_namespace) &#123;</span><br><span class="line">    <span class="keyword">return</span> get_global_group();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">soinfo_list_t</span> shared_group;</span><br><span class="line">  soinfo_list().for_each([&amp;](soinfo* si) &#123;</span><br><span class="line">    <span class="keyword">if</span> ((si-&gt;get_rtld_flags() &amp; RTLD_GLOBAL) != <span class="number">0</span>) &#123;</span><br><span class="line">      shared_group.push_back(si);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> shared_group;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>这里JAVA使用命名空间一般有两个，都是跟<code>ClassLoader</code>绑定在一起，包含系统<code>ClassLoader</code>和应用<code>ClassLoader</code>，关于命名空间介绍可以查看我的另一篇文章<a target="_blank" rel="noopener" href="https://www.52pojie.cn/thread-948942-1-1.html">Android7.0以上命名空间详解(dlopen限制)</a>，<code>get_shared_group</code>查找了命名空间内<code>soinfo</code>的<code>RTLD_GLOBAL</code>库查找，所以只要我们将全局库添加至所有命名空间并设置好标志后续创建的库都会默认包含我们的库。</p>
 <p>分析到这里我们的目的已经很明确了：1.设置全局标志。2.将库添加到所有命名空间。当然Android7.0以下没有命名空间则直接省略第二步。</p>
-<h2 id="代码实现添加全局库-参考fake-linker源码"><a href="#代码实现添加全局库-参考fake-linker源码" class="headerlink" title="代码实现添加全局库  参考fake-linker源码"></a>代码实现添加全局库  参考<a href="https://github.com/sanfengAndroid/fake-linker">fake-linker</a>源码</h2><ol>
+<h2 id="代码实现添加全局库-参考fake-linker源码"><a href="#代码实现添加全局库-参考fake-linker源码" class="headerlink" title="代码实现添加全局库  参考fake-linker源码"></a>代码实现添加全局库  参考<a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/fake-linker">fake-linker</a>源码</h2><ol>
 <li><p>获取所有命名空间</p>
 <p> 在<code>linker_main.cpp</code>中有<code>static soinfo* solist;</code>全局静态变量，通过它可以获取到所有已加载的<code>soinfo</code>进而得到所有命名空间，执行时机越早则找到的命名空间越全，可能存在部分Android使用的命名空间无法找到，只需要在Hook模块特殊处理<code>android_dlopen_ext</code>确保添加全局库即可</p>
 </li>
 <li><p>设置全局库</p>
-<p> 参考项目<a href="https://github.com/sanfengAndroid/fake-linker">fake-linker</a>源码</p>
+<p> 参考项目<a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/fake-linker">fake-linker</a>源码</p>
 </li>
 <li><p>项目其它的一些处理</p>
 <ol>
@@ -374,17 +374,17 @@
   <div id="qr" style="display: block;">
       
       <div style="display: inline-block;">
-        <img src="/images/wechatpay.png" alt="sanfengAndroid 微信支付">
+        <img src="/blog/images/wechatpay.png" alt="sanfengAndroid 微信支付">
         <p>微信支付</p>
       </div>
       
       <div style="display: inline-block;">
-        <img src="/images/alipay.png" alt="sanfengAndroid 支付宝">
+        <img src="/blog/images/alipay.png" alt="sanfengAndroid 支付宝">
         <p>支付宝</p>
       </div>
       
       <div style="display: inline-block;">
-        <img src="/images/paypal.png" alt="sanfengAndroid PayPal">
+        <img src="/blog/images/paypal.png" alt="sanfengAndroid PayPal">
         <p>PayPal</p>
       </div>
 
@@ -400,7 +400,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/" title="Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook">https://github.com/sanfengAndroid/2021/01/10/modify-linker-to-implement-plt-hook/</a>
+    <a href="https://sanfengandroid.github.io/blog/2021/01/10/modify-linker-to-implement-plt-hook/" title="Android 动态修改Linker实现LD_PRELOAD全局库PLT Hook">https://sanfengandroid.github.io/blog/2021/01/10/modify-linker-to-implement-plt-hook/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -424,9 +424,9 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/Android-Hook/" rel="tag"># Android Hook</a>
-              <a href="/tags/PLT-Hook/" rel="tag"># PLT Hook</a>
-              <a href="/tags/Android%E6%BA%90%E7%A0%81/" rel="tag"># Android源码</a>
+              <a href="/blog/tags/Android%E6%BA%90%E7%A0%81/" rel="tag"># Android源码</a>
+              <a href="/blog/tags/Android-Hook/" rel="tag"># Android Hook</a>
+              <a href="/blog/tags/PLT-Hook/" rel="tag"># PLT Hook</a>
           </div>
 
         
@@ -436,7 +436,7 @@
     <div class="post-nav">
       <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/2021/02/20/fakexposed-principle-analyze/" rel="next" title="FakeXposed原理分析">
+    <a href="/blog/2021/02/20/fakexposed-principle-analyze/" rel="next" title="FakeXposed原理分析">
       FakeXposed原理分析 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
@@ -510,20 +510,20 @@
 <div class="site-state-wrap motion-element">
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
-          <a href="/archives/">
+          <a href="/blog/archives/">
         
           <span class="site-state-item-count">5</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
-            <a href="/categories/">
+            <a href="/blog/categories/">
           
         <span class="site-state-item-count">3</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
-            <a href="/tags/">
+            <a href="/blog/tags/">
           
         <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">标签</span></a>
@@ -532,11 +532,11 @@
 </div>
   <div class="links-of-author motion-element">
       <span class="links-of-author-item">
-        <a href="https://github.com/sanfengAndroid" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;sanfengAndroid"><i class="fa fa-fw fa-github"></i>GitHub</a>
+        <a href="https://github.com/sanfengAndroid" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;sanfengAndroid" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
       </span>
   </div>
   <div class="cc-license motion-element" itemprop="license">
-    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/blog/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
   </div>
 
 
@@ -593,23 +593,23 @@
   </div>
 
   
-  <script src="/lib/anime.min.js"></script>
-  <script src="/lib/pjax/pjax.min.js"></script>
+  <script src="/blog/lib/anime.min.js"></script>
+  <script src="/blog/lib/pjax/pjax.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
   <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
-  <script src="/lib/velocity/velocity.min.js"></script>
-  <script src="/lib/velocity/velocity.ui.min.js"></script>
+  <script src="/blog/lib/velocity/velocity.min.js"></script>
+  <script src="/blog/lib/velocity/velocity.ui.min.js"></script>
 
-<script src="/js/utils.js"></script>
+<script src="/blog/js/utils.js"></script>
 
-<script src="/js/motion.js"></script>
-
-
-<script src="/js/schemes/muse.js"></script>
+<script src="/blog/js/motion.js"></script>
 
 
-<script src="/js/next-boot.js"></script>
+<script src="/blog/js/schemes/muse.js"></script>
+
+
+<script src="/blog/js/next-boot.js"></script>
 
   <script>
 var pjax = new Pjax({
@@ -714,7 +714,7 @@ NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
       repo        : 'pages-comment',
       owner       : 'sanfengAndroid',
       admin       : ['sanfengAndroid'],
-      id          : 'a24c8290a96ea45e81ebdb39f3ef5a5a',
+      id          : '26d14f4f0a8da5f69389491f7612c921',
         language: 'zh-CN',
       distractionFreeMode: true
     });
