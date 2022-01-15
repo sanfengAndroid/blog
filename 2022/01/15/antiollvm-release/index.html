@@ -16,33 +16,21 @@
   <meta name="author" content="sanfengAndroid">
   <meta name="keywords" content="Android安全,Android逆向,AntiOllvm">
   
-    <meta name="description" content="样本说明来自看雪论坛对ollvm的算法进行逆向分析和还原  libnative-lib.so 原版混淆的二进制文件 libnative-lib-anti.so 去混淆后的二进制文件">
+    <meta name="description" content="感谢大家一直以来的关注和支持，AntiOllvm经过多次修改终于发布第一个版本啦。 AntiOllvmAntiOllvm 是一款自动化去除二进制文件混淆并重新生成二进制文件的软件，去除常见的虚假控制流、指令替换、代码平坦化等等 正式版本 V2022.01.14 开启ARM，ARM64 去混淆，实际上X86也支持解码去混淆的，只是在优化过程中可能有问题，后续版本尽快修复 支持同时去混淆多个函数 支持">
 <meta property="og:type" content="article">
-<meta property="og:title" content="AntiOllvm演示教程">
-<meta property="og:url" content="https://sanfengandroid.github.io/blog/2022/01/06/AntiOllvmUse/">
+<meta property="og:title" content="antiollvm-release">
+<meta property="og:url" content="https://sanfengandroid.github.io/blog/2022/01/15/antiollvm-release/">
 <meta property="og:site_name" content="sanfengAndroid逆向安全">
-<meta property="og:description" content="样本说明来自看雪论坛对ollvm的算法进行逆向分析和还原  libnative-lib.so 原版混淆的二进制文件 libnative-lib-anti.so 去混淆后的二进制文件">
+<meta property="og:description" content="感谢大家一直以来的关注和支持，AntiOllvm经过多次修改终于发布第一个版本啦。 AntiOllvmAntiOllvm 是一款自动化去除二进制文件混淆并重新生成二进制文件的软件，去除常见的虚假控制流、指令替换、代码平坦化等等 正式版本 V2022.01.14 开启ARM，ARM64 去混淆，实际上X86也支持解码去混淆的，只是在优化过程中可能有问题，后续版本尽快修复 支持同时去混淆多个函数 支持">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/JNI_OnLoad_obf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/JNI_OnLoad_antiobf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_12AE4_obf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_12AE4_antiobf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1D1E8_obf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1D1E8_antiobf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_26300_obf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_26300_antiobf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1B89C_obf.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1B89C_antiobf.png">
-<meta property="article:published_time" content="2022-01-06T13:10:33.000Z">
-<meta property="article:modified_time" content="2022-01-07T01:28:51.490Z">
+<meta property="article:published_time" content="2022-01-15T11:42:02.000Z">
+<meta property="article:modified_time" content="2022-01-15T15:01:44.730Z">
 <meta property="article:author" content="sanfengAndroid">
-<meta property="article:tag" content="AntiOllvm">
-<meta property="article:tag" content="Deobfuscate">
+<meta property="article:tag" content="Android安全,Android逆向,AntiOllvm">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/JNI_OnLoad_obf.png">
   
   
-  <title>AntiOllvm演示教程 - sanfengAndroid逆向安全</title>
+  <title>antiollvm-release - sanfengAndroid逆向安全</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css" />
 
@@ -200,9 +188,9 @@
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
           <div class="page-header text-center fade-in-up">
-            <span class="h2" id="subtitle" title="AntiOllvm演示教程">
+            <span class="h2" id="subtitle" title="antiollvm-release">
               
-                AntiOllvm演示教程
+                antiollvm-release
               
             </span>
 
@@ -212,8 +200,8 @@
   
     <span class="post-meta">
       <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-      <time datetime="2022-01-06 21:10" pubdate>
-        2022年1月6日 晚上
+      <time datetime="2022-01-15 19:42" pubdate>
+        2022年1月15日 晚上
       </time>
     </span>
   
@@ -223,7 +211,7 @@
   
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      1.2k 字
+      949 字
     </span>
   
 
@@ -232,7 +220,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      10 分钟
+      8 分钟
     </span>
   
 
@@ -261,69 +249,113 @@
         <div class="py-5" id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">AntiOllvm演示教程</h1>
+            <h1 style="display: none">antiollvm-release</h1>
             
             <div class="markdown-body">
-              <h2 id="样本说明"><a href="#样本说明" class="headerlink" title="样本说明"></a>样本说明</h2><p>来自看雪论坛<a target="_blank" rel="noopener" href="https://bbs.pediy.com/thread-270529.htm">对ollvm的算法进行逆向分析和还原</a></p>
+              <p>感谢大家一直以来的关注和支持，AntiOllvm经过多次修改终于发布第一个版本啦。</p>
+<h3 id="AntiOllvm"><a href="#AntiOllvm" class="headerlink" title="AntiOllvm"></a>AntiOllvm</h3><p>AntiOllvm 是一款自动化去除二进制文件混淆并重新生成二进制文件的软件，去除常见的虚假控制流、指令替换、代码平坦化等等</p>
+<h3 id="正式版本-V2022-01-14"><a href="#正式版本-V2022-01-14" class="headerlink" title="正式版本 V2022.01.14"></a>正式版本 V2022.01.14</h3><ul>
+<li>开启ARM，ARM64 去混淆，实际上X86也支持解码去混淆的，只是在优化过程中可能有问题，后续版本尽快修复</li>
+<li>支持同时去混淆多个函数</li>
+<li>支持重新编译优化后的代码</li>
+<li>支持重编译后自动修复重定位，生成与原文件一致的文件</li>
+<li>输出优化后的 <code>LLVM IR</code></li>
+<li>支持更加复杂的函数去混淆</li>
+<li>支持 ELF, Mach-O，raw 文件格式，COFF文件格式目前重定位还有待修复</li>
+</ul>
+<h3 id="试用版本-V2022-01-14"><a href="#试用版本-V2022-01-14" class="headerlink" title="试用版本 V2022.01.14"></a>试用版本 V2022.01.14</h3><ul>
+<li>仅支持 ARM 去混淆</li>
+<li>一次运行只能去混淆一个函数</li>
+<li>不支持重新编译优化后的代码</li>
+<li>不支持复杂函数的去混淆</li>
+<li>7天试用限制</li>
+</ul>
+<h3 id="官网-AntiOllvm-即将开启"><a href="#官网-AntiOllvm-即将开启" class="headerlink" title="官网 AntiOllvm 即将开启"></a>官网 <a target="_blank" rel="noopener" href="https://antiollvm.com/">AntiOllvm</a> 即将开启</h3><h3 id="查看软件介绍"><a href="#查看软件介绍" class="headerlink" title="查看软件介绍"></a>查看软件介绍</h3><ul>
+<li>中国 <a target="_blank" rel="noopener" href="https://gitee.com/sanfengAndroid/AntiOllvm">https://gitee.com/sanfengAndroid/AntiOllvm</a></li>
+<li>其它地区 <a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm">https://github.com/sanfengAndroid/AntiOllvm</a></li>
+</ul>
+<h3 id="试用版下载"><a href="#试用版下载" class="headerlink" title="试用版下载"></a>试用版下载</h3><ul>
+<li>中国 <a target="_blank" rel="noopener" href="https://gitee.com/sanfengAndroid/AntiOllvm/releases/antiollvm-trial">antiollvm-trial.7z</a></li>
+<li>其它地区 <a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/releases/tag/antiollvm-trial">antiollvm-trial.7z</a></li>
+</ul>
+<h3 id="正式版下载"><a href="#正式版下载" class="headerlink" title="正式版下载"></a>正式版下载</h3><p>购买后提供下载地址</p>
+<h3 id="软件计费"><a href="#软件计费" class="headerlink" title="软件计费"></a>软件计费</h3><table>
+<thead>
+<tr>
+<th align="center"></th>
+<th align="center">中国</th>
+<th align="center">其它地区</th>
+<th align="center">绑定设备</th>
+<th align="center">换绑次数</th>
+<th align="center">功能限制</th>
+<th align="center">后续功能限制</th>
+<th align="center">额外赠送</th>
+<th align="center">Windows x64</th>
+<th align="center">Linux x64</th>
+<th align="center">macOS</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">试用</td>
+<td align="center">\</td>
+<td align="center">\</td>
+<td align="center">\</td>
+<td align="center">\</td>
+<td align="center">仅Arm,不支持重编译</td>
+<td align="center">\</td>
+<td align="center">\</td>
+<td align="center">支持</td>
+<td align="center">后续开放</td>
+<td align="center">后续开放</td>
+</tr>
+<tr>
+<td align="center">包年</td>
+<td align="center">9600￥</td>
+<td align="center">1650$</td>
+<td align="center">1台</td>
+<td align="center">1</td>
+<td align="center">无</td>
+<td align="center">可能额外收费</td>
+<td align="center">现在-2023.1.18</td>
+<td align="center">支持</td>
+<td align="center">后续开放</td>
+<td align="center">后续开放</td>
+</tr>
+<tr>
+<td align="center">永久</td>
+<td align="center">38000￥</td>
+<td align="center">6800$</td>
+<td align="center">1台</td>
+<td align="center">10</td>
+<td align="center">无</td>
+<td align="center">无额外收费</td>
+<td align="center">无限制</td>
+<td align="center">支持</td>
+<td align="center">后续开放</td>
+<td align="center">后续开放</td>
+</tr>
+</tbody></table>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/Arm64Test/kanxueOllvm/bin/libnative-lib.so">libnative-lib.so</a> 原版混淆的二进制文件</li>
-<li><a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/Arm64Test/kanxueOllvm/bin/libnative-lib-anti.so">libnative-lib-anti.so</a> 去混淆后的二进制文件</li>
+<li>首次购买包年赠送有效期现在至2023.1.18日，购买永久则可以无限制的使用后续新增功能</li>
 </ul>
-<a id="more"></a>
-
-<h3 id="去混淆函数"><a href="#去混淆函数" class="headerlink" title="去混淆函数"></a>去混淆函数</h3><ul>
-<li>JNI_ONLoad 正常混淆，导出函数可以使用 <code>--select-functions</code> 选项设置名称。该函数主要调用 <code>RegisterNatives</code> 注册C函数</li>
-<li>sub_12AE4 函数范围 0x12AE4-0x13AAC 存在很多小的混淆块，函数包含异常处理，还使用了向量指令，目前暂未添加该向量指令和异常处理，后续版本添加。</li>
-<li>sub_1D1E8 函数范围 0x1D1E8-0x26300 函数体较大，存在很多小混淆块</li>
-<li>sub_26300 函数范围 0x26300-0x26698 代码较少</li>
-<li>sub_1B89C 函数范围 0x1B89C-0x1C918 函数，代码量中等</li>
+<h3 id="购买方式"><a href="#购买方式" class="headerlink" title="购买方式"></a>购买方式</h3><ul>
+<li>请查看上面软件描述的详情页获取</li>
 </ul>
-<h3 id="AntiOllvm-使用参数介绍"><a href="#AntiOllvm-使用参数介绍" class="headerlink" title="AntiOllvm 使用参数介绍"></a>AntiOllvm 使用参数介绍</h3><ul>
-<li><code>--select-functions</code> 设置去混淆的函数名称，该函数必须在符号表中</li>
-<li><code>--select-ranges</code> 设置去混淆的地址范围，最好一个范围一个函数，避免生成其它不必要函数，当解码函数是 Thumb 函数时，需要起始地址 + 1用来标识这是 <code>Thumb</code> 方法</li>
-<li><code>-l</code> 输出优化后的 LLVM 位码，这可以用来检查错误</li>
-<li><code>--config</code> 设置配置文件路径，用来读取默认配置</li>
-<li>其它用法这里暂不介绍，请查看后续帮助文档</li>
-</ul>
-<h3 id="去混淆过程"><a href="#去混淆过程" class="headerlink" title="去混淆过程"></a>去混淆过程</h3><ul>
-<li><p>使用命令  </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><div class="code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><pre><code class="hljs shell">antiollvm.exe --config D:\retdec\install\share\retdec\decompiler-config.json .\libnative-lib.so --select-ranges 0x26300-0x26698,0x1b89c-0x1c918 --select-functions JNI_OnLoad<br>antiollvm.exe --config D:\retdec\install\share\retdec\decompiler-config.json .\libnative-lib.so --select-ranges 0x1d1e8-26300<br></code></pre></td></tr></table></figure>
-<p>第一条命令3个函数体较小，可以一次性去混淆。sub_1D1E8 函数较大单独运行避免占用内存太多</p>
+<h3 id="帮助文档"><a href="#帮助文档" class="headerlink" title="帮助文档"></a>帮助文档</h3><ul>
+<li><p>输入参数介绍<br><a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/doc/README.md">Help</a>, 中国地区可访问 <a target="_blank" rel="noopener" href="https://gitee.com/sanfengAndroid/AntiOllvm/blob/main/doc/README_CN.md">Help</a></p>
 </li>
-<li><p>生成文件</p>
-<ul>
-<li>libnative-lib-anti.so 带有 <code>anti</code> 后缀是在原二进制文件的基础上替换掉混淆函数，多次运行不会覆盖它，只会在该文件基础上替换函数。</li>
-<li>libnative-lib-compile.so 带有 <code>compile</code> 后缀是本次运行优化后的编译产物，该文件是可重定位文件，包含本次优化的所有相关变量和方法</li>
-</ul>
+<li><p>效果演示<br><a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/OpenSSLTest/doc/README_CN.md">ARM</a>，<a target="_blank" rel="noopener" href="https://github.com/sanfengAndroid/AntiOllvm/blob/main/Arm64Test/kanxueOllvm/README_CN.md">ARM64</a>，中国地区可访问 <a target="_blank" rel="noopener" href="https://gitee.com/sanfengAndroid/AntiOllvm/blob/main/OpenSSLTest/doc/README_CN.md">ARM</a>, <a target="_blank" rel="noopener" href="https://gitee.com/sanfengAndroid/AntiOllvm/blob/main/Arm64Test/kanxueOllvm/README_CN.md">ARM64</a></p>
 </li>
-</ul>
-<h3 id="去混淆效果对比"><a href="#去混淆效果对比" class="headerlink" title="去混淆效果对比"></a>去混淆效果对比</h3><ul>
-<li>JNI_ONLoad  </li>
-</ul>
-<p>去混淆之前<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/JNI_OnLoad_obf.png" srcset="/blog/img/loading.gif" lazyload alt="JNI_ONLoad_before">  </p>
-<p>去混淆之后<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/JNI_OnLoad_antiobf.png" srcset="/blog/img/loading.gif" lazyload alt="JNI_ONLoad_after"></p>
-<ul>
-<li>sub_12AE4  </li>
-</ul>
-<p>去混淆之前<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_12AE4_obf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_12ae4_before">  </p>
-<p>去混淆之后<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_12AE4_antiobf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_12ae4_after"></p>
-<ul>
-<li>sub_1D1E8  </li>
-</ul>
-<p>去混淆之前<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1D1E8_obf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_1d1e8_before">  </p>
-<p>去混淆之后<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1D1E8_antiobf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_1d1e8_after"></p>
-<ul>
-<li>sub_26300  </li>
-</ul>
-<p>去混淆之前<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_26300_obf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_26300_before">  </p>
-<p>去混淆之后<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_26300_antiobf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_26300_after"></p>
-<ul>
-<li>sub_1B89C  </li>
-</ul>
-<p>去混淆之前<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1B89C_obf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_1b89c_before">  </p>
-<p>去混淆之后<br><img src="https://cdn.jsdelivr.net/gh/sanfengAndroid/AntiOllvm@main/Arm64Test/kanxueOllvm/img/sub_1B89C_antiobf.png" srcset="/blog/img/loading.gif" lazyload alt="sub_1b89c_after"></p>
-<h3 id="去混淆效果对比-1"><a href="#去混淆效果对比-1" class="headerlink" title="去混淆效果对比"></a>去混淆效果对比</h3><ul>
-<li>JNI_ONLoad<video src="https://raw.githubusercontent.com/sanfengAndroid/AntiOllvm/main/Arm64Test/kanxueOllvm/video/kanxueollvm2.mp4" controls="controls" width="100%" height="auto"/></li>
+<li><p>视频演示<br><a target="_blank" rel="noopener" href="https://raw.githubusercontent.com/sanfengAndroid/AntiOllvm/main/Arm64Test/kanxueOllvm/video/kanxueollvm2.mp4">Video</a> 中国地区 <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/hN_QB4MM4EaVwqEBNnj5Tw">视频</a></p>
+<h3 id="软件未来"><a href="#软件未来" class="headerlink" title="软件未来"></a>软件未来</h3></li>
+<li><p>开启X86，X64去混淆支持</p>
+</li>
+<li><p>开发IDA插件，直接在IDA中更方便的使用去混淆功能</p>
+</li>
+<li><p>开放模拟执行，以指令或函数为单位，实现在PC上执行跨平台二进制文件，例如解密函数、算法分析、代码跟踪等等</p>
+</li>
+<li><p>开发IDA虚拟调试，无需真实环境直接调试二进制文件</p>
+</li>
 </ul>
 
             </div>
@@ -331,22 +363,6 @@
             <div>
               <div class="post-metas mb-3">
                 
-                  <div class="post-meta mr-3">
-                    <i class="iconfont icon-category"></i>
-                    
-                      <a class="hover-with-bg" href="/blog/categories/AntiOllvm/">AntiOllvm</a>
-                    
-                  </div>
-                
-                
-                  <div class="post-meta">
-                    <i class="iconfont icon-tags"></i>
-                    
-                      <a class="hover-with-bg" href="/blog/tags/AntiOllvm/">AntiOllvm</a>
-                    
-                      <a class="hover-with-bg" href="/blog/tags/Deobfuscate/">Deobfuscate</a>
-                    
-                  </div>
                 
               </div>
               
@@ -361,18 +377,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/blog/2022/01/15/antiollvm-release/">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">antiollvm-release</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/blog/2021/06/17/anti-ollvm-analysis/">
-                        <span class="hidden-mobile">AntiOllvm去除二进制代码Ollvm混淆并回编译</span>
+                      <a href="/blog/2022/01/06/AntiOllvmUse/">
+                        <span class="hidden-mobile">AntiOllvm演示教程</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
